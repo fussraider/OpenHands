@@ -6,10 +6,19 @@ import (
 	"github.com/pelletier/go-toml/v2"
 )
 
+type AppMode string
+
+const (
+	AppModeOpenHands AppMode = "oss"
+	AppModeSaaS      AppMode = "saas"
+)
+
 type Config struct {
+	AppMode AppMode       `toml:"app_mode"`
 	LLM     LLMConfig     `toml:"llm"`
 	Agent   AgentConfig   `toml:"agent"`
 	Sandbox SandboxConfig `toml:"sandbox"`
+	Server  ServerConfig  `toml:"server"`
 }
 
 type LLMConfig struct {
@@ -26,16 +35,26 @@ type SandboxConfig struct {
 	Runtime string `toml:"runtime"`
 }
 
+type ServerConfig struct {
+	Host string `toml:"host"`
+	Port int    `toml:"port"`
+}
+
 var AppConfig *Config
 
 func LoadConfig() error {
 	// Default config
 	AppConfig = &Config{
+		AppMode: AppModeOpenHands,
 		LLM: LLMConfig{
 			Model: "gpt-4",
 		},
 		Agent: AgentConfig{
 			Name: "CodeActAgent",
+		},
+		Server: ServerConfig{
+			Host: "localhost",
+			Port: 3000,
 		},
 	}
 
