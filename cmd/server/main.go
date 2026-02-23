@@ -40,7 +40,13 @@ func main() {
 	mux.HandleFunc("POST /api/secrets", handlers.StoreSecretHandler)
 	mux.HandleFunc("DELETE /api/secrets/{key}", handlers.DeleteSecretHandler)
 
-	mux.HandleFunc("GET /api/github/repositories", handlers.RepositoriesHandler)
+	// Github / Git Provider API
+	mux.HandleFunc("GET /api/user/installations", handlers.GetUserInstallationsHandler)
+	mux.HandleFunc("GET /api/user/repositories", handlers.GetUserRepositoriesHandler)
+	mux.HandleFunc("GET /api/user/info", handlers.GetUserInfoHandler)
+	mux.HandleFunc("GET /api/user/search/repositories", handlers.SearchRepositoriesHandler)
+	mux.HandleFunc("GET /api/user/search/branches", handlers.SearchBranchesHandler)
+	mux.HandleFunc("GET /api/user/repository/branches", handlers.GetRepositoryBranchesHandler)
 
 	// MCP Mount
 	mux.HandleFunc("/mcp/", handlers.MCPSSEHandler)
