@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"openhands-go/server/config"
 	"openhands-go/server/runtime"
 	"sync"
 )
@@ -37,10 +38,19 @@ func (rm *RuntimeManager) CreateRuntime(ctx context.Context, conversationID stri
 		return nil, errors.New("runtime already exists")
 	}
 
-	// For now, only LocalRuntime is supported
-	rt := runtime.NewLocalRuntime()
-	// Initialize/Start logic if needed here, but LocalRuntime starts on command execution currently.
-	// Ideally, Start() should be called here if it was a container.
+	var rt runtime.Runtime
+	var err error
+
+	// Check config to decide which runtime to use
+	if config.AppConfig.Sandbox.Runtime == "docker" {
+		rt, err = runtime.NewDockerRuntime(config.AppConfig)
+	} else {
+		rt = runtime.NewLocalRuntime()
+	}
+
+	if err != nil {
+		return nil, err
+	}
 
 	rm.runtimes[conversationID] = rt
 	return rt, nil
