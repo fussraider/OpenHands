@@ -53,7 +53,7 @@ func LoadConfig() error {
 			Name: "CodeActAgent",
 		},
 		Server: ServerConfig{
-			Host: "localhost",
+			Host: "127.0.0.1",
 			Port: 3000,
 		},
 	}

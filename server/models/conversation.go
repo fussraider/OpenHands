@@ -36,3 +36,8 @@ type ConversationResponse struct {
 	ConversationStatus ConversationStatus `json:"conversation_status,omitempty"`
 	Message            string             `json:"message,omitempty"`
 }
+
+type ActionRequest struct {
+	Action string `json:"action"`
+	Args   string `json:"args"`
+}

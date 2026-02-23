@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"openhands-go/server/config"
@@ -23,6 +24,7 @@ func main() {
 	mux.HandleFunc("GET /api/conversations", handlers.SearchConversationsHandler)
 	mux.HandleFunc("POST /api/conversations", handlers.NewConversationHandler)
 	mux.HandleFunc("GET /api/conversations/{id}", handlers.GetConversationHandler)
+	mux.HandleFunc("POST /api/conversations/{id}/action", handlers.ExecuteActionHandler) // New route
 
 	mux.HandleFunc("GET /api/conversations/{id}/list-files", handlers.ListFilesHandler)
 	mux.HandleFunc("GET /api/conversations/{id}/select-file", handlers.SelectFileHandler)
@@ -62,8 +64,14 @@ func main() {
 	// Wrap with middleware
 	handler := middleware.AuthMiddleware(mux)
 
-	log.Println("Starting server on :3000")
-	if err := http.ListenAndServe(":3000", handler); err != nil {
+	host := config.AppConfig.Server.Host
+	if host == "" {
+		host = "localhost"
+	}
+	addr := fmt.Sprintf("%s:%d", host, config.AppConfig.Server.Port)
+
+	log.Printf("Starting server on %s", addr)
+	if err := http.ListenAndServe(addr, handler); err != nil {
 		log.Fatal(err)
 	}
 }
