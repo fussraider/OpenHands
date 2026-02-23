@@ -5,11 +5,11 @@ This file tracks the migration status of OpenHands backend features from Python 
 | Feature | Python Source | Go Implementation | Status | Notes |
 |---|---|---|---|---|
 | Health Check | `openhands/server/routes/health.py` | `server/handlers/common.go` | ✅ Complete | Basic /health and /alive endpoints implemented. |
-| Settings | `openhands/server/routes/settings.py` | `server/handlers/settings.go` | 🚧 In Progress | Initial API structure implemented. |
+| Settings | `openhands/server/routes/settings.py` | `server/handlers/settings.go` | 🚧 In Progress | Initial API structure implemented (in-memory). |
 | Models List | `openhands/server/routes/settings.py` (indirectly) | `server/handlers/common.go` | 🚧 In Progress | Mock list returned. |
-| Conversations | `openhands/server/routes/conversation.py` | `server/handlers/mock.go` | ❌ Pending | Mock list returned. |
+| Conversations | `openhands/server/routes/conversation.py` | `server/handlers/conversations.go` | 🚧 In Progress | Basic CRUD implemented (in-memory). |
 | Static Files | `openhands/server/app.py` (config) | `server/handlers/static.go` | ✅ Complete | Serving frontend build with SPA fallback. |
-| Github Integration | `openhands/server/routes/git.py` | `server/handlers/mock.go` | ❌ Pending | Mock endpoint implemented. |
+| Github Integration | `openhands/server/routes/git.py` | `server/handlers/github.go` | 🚧 In Progress | Mock endpoint implemented. |
 | Files API | `openhands/server/routes/files.py` | `server/handlers/files.go` | ❌ Pending | |
 | Feedback API | `openhands/server/routes/feedback.py` | `server/handlers/feedback.go` | ❌ Pending | |
 | MCP Integration | `openhands/server/routes/mcp.py` | `server/handlers/mcp.go` | ❌ Pending | |

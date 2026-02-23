@@ -1,0 +1,64 @@
+package store
+
+import (
+	"errors"
+	"openhands-go/server/models"
+	"sync"
+	"time"
+
+	"github.com/google/uuid"
+)
+
+type ConversationStore struct {
+	mu            sync.RWMutex
+	conversations map[string]models.ConversationInfo
+}
+
+func NewConversationStore() *ConversationStore {
+	return &ConversationStore{
+		conversations: make(map[string]models.ConversationInfo),
+	}
+}
+
+func (s *ConversationStore) ListConversations() []models.ConversationInfo {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	conversations := make([]models.ConversationInfo, 0, len(s.conversations))
+	for _, c := range s.conversations {
+		conversations = append(conversations, c)
+	}
+	return conversations
+}
+
+func (s *ConversationStore) GetConversation(id string) (models.ConversationInfo, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	c, ok := s.conversations[id]
+	if !ok {
+		return models.ConversationInfo{}, errors.New("conversation not found")
+	}
+	return c, nil
+}
+
+func (s *ConversationStore) CreateConversation(req models.InitSessionRequest) (models.ConversationInfo, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	id := uuid.New().String()
+	now := time.Now()
+
+	conversation := models.ConversationInfo{
+		ConversationID:     id,
+		Title:              "New Conversation", // Default title logic to be implemented
+		CreatedAt:          now,
+		LastUpdatedAt:      now,
+		Status:             models.ConversationStatusStopped, // Initially stopped
+		SelectedRepository: req.Repository,
+		SelectedBranch:     req.SelectedBranch,
+	}
+
+	s.conversations[id] = conversation
+	return conversation, nil
+}

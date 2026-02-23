@@ -8,20 +8,19 @@ import (
 
 func main() {
 	// API routes
-	http.HandleFunc("/api/options/models", handlers.ModelsHandler)
-	http.HandleFunc("/api/conversations", handlers.ConversationsHandler)
-	http.HandleFunc("/api/settings", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			handlers.GetSettingsHandler(w, r)
-		} else if r.Method == http.MethodPost {
-			handlers.StoreSettingsHandler(w, r)
-		} else {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	})
-	http.HandleFunc("/api/github/repositories", handlers.RepositoriesHandler)
-	http.HandleFunc("/health", handlers.HealthHandler)
-	http.HandleFunc("/alive", handlers.HealthHandler)
+	http.HandleFunc("GET /api/options/models", handlers.ModelsHandler)
+
+	http.HandleFunc("GET /api/conversations", handlers.SearchConversationsHandler)
+	http.HandleFunc("POST /api/conversations", handlers.NewConversationHandler)
+	http.HandleFunc("GET /api/conversations/{id}", handlers.GetConversationHandler)
+
+	http.HandleFunc("GET /api/settings", handlers.GetSettingsHandler)
+	http.HandleFunc("POST /api/settings", handlers.StoreSettingsHandler)
+
+	http.HandleFunc("GET /api/github/repositories", handlers.RepositoriesHandler)
+
+	http.HandleFunc("GET /health", handlers.HealthHandler)
+	http.HandleFunc("GET /alive", handlers.HealthHandler)
 
 	// Static file serving
 	staticDir := "frontend/build"
