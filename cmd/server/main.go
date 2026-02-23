@@ -21,11 +21,12 @@ func main() {
 	http.HandleFunc("GET /api/conversations/{id}/list-files", handlers.ListFilesHandler)
 	http.HandleFunc("GET /api/conversations/{id}/select-file", handlers.SelectFileHandler)
 
+	http.HandleFunc("GET /api/conversations/{id}/trajectory", handlers.GetTrajectoryHandler)
+	http.HandleFunc("POST /api/conversations/{id}/submit-feedback", handlers.SubmitFeedbackHandler)
+
 	http.HandleFunc("GET /api/settings", handlers.GetSettingsHandler)
 	http.HandleFunc("POST /api/settings", handlers.StoreSettingsHandler)
 
-	// Secrets API - note: actual paths need to be verified against Python implementation
-	// Python: /api/secrets (GET, POST), /api/secrets/{key} (DELETE)
 	http.HandleFunc("GET /api/secrets", handlers.GetSecretsHandler)
 	http.HandleFunc("POST /api/secrets", handlers.StoreSecretHandler)
 	http.HandleFunc("DELETE /api/secrets/{key}", handlers.DeleteSecretHandler)

@@ -20,7 +20,14 @@ func isPathSafe(base, path string) bool {
 	if err != nil {
 		return false
 	}
-	return strings.HasPrefix(absPath, absBase)
+
+	// Ensure the base path ends with a separator to prevent partial matches
+	// e.g. /workspace matching /workspace_secrets
+	if !strings.HasSuffix(absBase, string(os.PathSeparator)) {
+		absBase += string(os.PathSeparator)
+	}
+
+	return strings.HasPrefix(absPath, absBase) || absPath == strings.TrimSuffix(absBase, string(os.PathSeparator))
 }
 
 // ListFilesHandler lists files in the workspace
