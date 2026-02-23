@@ -43,7 +43,7 @@ func TestNewConversationHandler(t *testing.T) {
 func TestSearchConversationsHandler(t *testing.T) {
 	// First create a conversation to ensure list is not empty
 	reqBody := models.InitSessionRequest{Repository: "test-repo-2"}
-	globalConversationStore.CreateConversation(reqBody)
+	conversationStore.CreateConversation(reqBody)
 
 	req, err := http.NewRequest("GET", "/api/conversations", nil)
 	if err != nil {
@@ -73,7 +73,7 @@ func TestSearchConversationsHandler(t *testing.T) {
 func TestGetConversationHandler(t *testing.T) {
 	// Create a conversation
 	reqBody := models.InitSessionRequest{Repository: "test-repo-3"}
-	created, _ := globalConversationStore.CreateConversation(reqBody)
+	created, _ := conversationStore.CreateConversation(reqBody)
 
 	// Create request with path value
 	req, err := http.NewRequest("GET", "/api/conversations/"+created.ConversationID, nil)

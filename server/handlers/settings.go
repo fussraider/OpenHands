@@ -4,20 +4,14 @@ import (
 	"encoding/json"
 	"net/http"
 	"openhands-go/server/models"
-	"sync"
+	"openhands-go/server/store"
 )
 
-var (
-	settingsStore = models.DefaultSettings()
-	settingsMutex sync.RWMutex
-)
+var settingsStore = store.NewSettingsStore("settings.json")
 
 func GetSettingsHandler(w http.ResponseWriter, r *http.Request) {
-	settingsMutex.RLock()
-	defer settingsMutex.RUnlock()
-
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(settingsStore)
+	json.NewEncoder(w).Encode(settingsStore.Get())
 }
 
 func StoreSettingsHandler(w http.ResponseWriter, r *http.Request) {
@@ -27,11 +21,10 @@ func StoreSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	settingsMutex.Lock()
-	defer settingsMutex.Unlock()
-	// In a real implementation, we would merge with existing settings
-	// For now, we just overwrite
-	settingsStore = newSettings
+	if err := settingsStore.Update(newSettings); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Settings stored"})

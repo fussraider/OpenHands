@@ -1,8 +1,10 @@
 package store
 
 import (
+	"encoding/json"
 	"errors"
 	"openhands-go/server/models"
+	"os"
 	"sync"
 	"time"
 
@@ -12,12 +14,32 @@ import (
 type ConversationStore struct {
 	mu            sync.RWMutex
 	conversations map[string]models.ConversationInfo
+	filePath      string
 }
 
-func NewConversationStore() *ConversationStore {
-	return &ConversationStore{
+func NewConversationStore(filePath string) *ConversationStore {
+	store := &ConversationStore{
 		conversations: make(map[string]models.ConversationInfo),
+		filePath:      filePath,
 	}
+	store.load()
+	return store
+}
+
+func (s *ConversationStore) load() {
+	data, err := os.ReadFile(s.filePath)
+	if err != nil {
+		return
+	}
+	json.Unmarshal(data, &s.conversations)
+}
+
+func (s *ConversationStore) save() error {
+	data, err := json.MarshalIndent(s.conversations, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(s.filePath, data, 0644)
 }
 
 func (s *ConversationStore) ListConversations() []models.ConversationInfo {
@@ -60,5 +82,8 @@ func (s *ConversationStore) CreateConversation(req models.InitSessionRequest) (m
 	}
 
 	s.conversations[id] = conversation
+	if err := s.save(); err != nil {
+		return models.ConversationInfo{}, err
+	}
 	return conversation, nil
 }

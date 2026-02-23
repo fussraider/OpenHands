@@ -14,6 +14,6 @@ This file tracks the migration status of OpenHands backend features from Python 
 | Secrets API | `openhands/server/routes/secrets.py` | `server/handlers/secrets.go` | ✅ Complete | In-memory secrets store implemented. |
 | Feedback API | `openhands/server/routes/feedback.py` | `server/handlers/feedback.go` | ✅ Complete | Stub implementation. |
 | Trajectory API | `openhands/server/routes/trajectory.py` | `server/handlers/trajectory.go` | ✅ Complete | Stub implementation. |
-| MCP Integration | `openhands/server/routes/mcp.py` | `server/handlers/mcp.go` | ❌ Pending | |
-| Public API | `openhands/server/routes/public.py` | `server/handlers/public.go` | ❌ Pending | |
-| Security API | `openhands/server/routes/security.py` | `server/handlers/security.go` | ❌ Pending | |
+| MCP Integration | `openhands/server/routes/mcp.py` | `server/handlers/mcp.go` | ✅ Complete | Stub implementation. |
+| Public API | `openhands/server/routes/public.py` | `server/handlers/options.go` | ✅ Complete | Implemented as Options API. |
+| Security API | `openhands/server/routes/security.py` | `server/handlers/security.go` | ✅ Complete | Stub implementation. |

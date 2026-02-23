@@ -4,13 +4,9 @@ import (
 	"log"
 	"net/http"
 	"openhands-go/server/handlers"
-	"openhands-go/server/store"
 )
 
 func main() {
-	// Initialize stores
-	store.NewConversationStore()
-
 	// API routes
 	http.HandleFunc("GET /api/options/models", handlers.ModelsHandler)
 	http.HandleFunc("GET /api/options/agents", handlers.GetAgentsHandler)

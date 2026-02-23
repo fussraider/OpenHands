@@ -7,11 +7,10 @@ import (
 	"openhands-go/server/store"
 )
 
-// Global instance for now
-var globalConversationStore = store.NewConversationStore()
+var conversationStore = store.NewConversationStore("conversations.json")
 
 func SearchConversationsHandler(w http.ResponseWriter, r *http.Request) {
-	conversations := globalConversationStore.ListConversations()
+	conversations := conversationStore.ListConversations()
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(conversations)
 }
@@ -23,7 +22,7 @@ func NewConversationHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	conversation, err := globalConversationStore.CreateConversation(req)
+	conversation, err := conversationStore.CreateConversation(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -35,7 +34,7 @@ func NewConversationHandler(w http.ResponseWriter, r *http.Request) {
 
 func GetConversationHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	conversation, err := globalConversationStore.GetConversation(id)
+	conversation, err := conversationStore.GetConversation(id)
 	if err != nil {
 		http.NotFound(w, r)
 		return
