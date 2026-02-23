@@ -30,7 +30,7 @@ These components are complex and tightly coupled with the Python SDK.
 
 2.  Run the Go server:
     ```bash
-    go run main.go
+    go run cmd/server/main.go
     ```
 
 3.  Open http://localhost:3000 in your browser.

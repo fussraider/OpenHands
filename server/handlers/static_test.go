@@ -1,4 +1,4 @@
-package main
+package handlers
 
 import (
 	"net/http"
@@ -7,53 +7,6 @@ import (
 	"path/filepath"
 	"testing"
 )
-
-func TestHealthHandler(t *testing.T) {
-	req, err := http.NewRequest("GET", "/health", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(healthHandler)
-
-	handler.ServeHTTP(rr, req)
-
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
-	}
-
-	expected := "OK"
-	if rr.Body.String() != expected {
-		t.Errorf("handler returned unexpected body: got %v want %v",
-			rr.Body.String(), expected)
-	}
-}
-
-func TestModelsHandler(t *testing.T) {
-	req, err := http.NewRequest("GET", "/api/options/models", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(modelsHandler)
-
-	handler.ServeHTTP(rr, req)
-
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
-	}
-
-	// Check content type
-	contentType := rr.Header().Get("Content-Type")
-	if contentType != "application/json" {
-		t.Errorf("handler returned wrong content type: got %v want %v",
-			contentType, "application/json")
-	}
-}
 
 func TestSPAHandler(t *testing.T) {
 	// Create a temporary directory for static files
@@ -77,8 +30,7 @@ func TestSPAHandler(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fs := http.FileServer(http.Dir(tmpDir))
-	handler := spaHandler(tmpDir, fs)
+	handler := SPAHandler(tmpDir)
 
 	// Test 1: Request existing file
 	req, _ := http.NewRequest("GET", "/file.txt", nil)

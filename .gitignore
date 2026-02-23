@@ -264,5 +264,5 @@ test-results
 .eval_sessions
 
 # Go backend
-server
+openhands-server
 server.log
