@@ -30,6 +30,25 @@ func isPathSafe(base, path string) bool {
 	return strings.HasPrefix(absPath, absBase) || absPath == strings.TrimSuffix(absBase, string(os.PathSeparator))
 }
 
+// filesToIgnore contains list of files/directories to exclude from listing
+var filesToIgnore = []string{
+	".git",
+	".DS_Store",
+	"node_modules",
+	"__pycache__",
+	"lost+found",
+	".vscode",
+}
+
+func shouldIgnore(name string) bool {
+	for _, ignore := range filesToIgnore {
+		if name == ignore || strings.HasPrefix(name, ignore+"/") {
+			return true
+		}
+	}
+	return false
+}
+
 // ListFilesHandler lists files in the workspace
 func ListFilesHandler(w http.ResponseWriter, r *http.Request) {
 	// r.PathValue("id") is conversation ID, but we share workspace for now
@@ -53,9 +72,12 @@ func ListFilesHandler(w http.ResponseWriter, r *http.Request) {
 
 	fileList := make([]string, 0, len(files))
 	for _, file := range files {
-		// Only list files, or directories if path is "."?
-		// The python implementation returns relative paths
 		name := file.Name()
+		if shouldIgnore(name) {
+			continue
+		}
+
+		// Python implementation returns relative paths
 		if path != "." {
 			name = filepath.Join(path, name)
 		}
