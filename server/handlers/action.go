@@ -7,7 +7,10 @@ import (
 	"openhands-go/server/services"
 )
 
-var actionService = services.NewActionService(conversationStore)
+var (
+	runtimeManager = services.NewRuntimeManager()
+	actionService  = services.NewActionService(conversationStore, runtimeManager)
+)
 
 func ExecuteActionHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")

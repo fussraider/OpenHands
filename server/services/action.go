@@ -4,45 +4,85 @@ import (
 	"context"
 	"fmt"
 	"openhands-go/server/models"
-	"openhands-go/server/runtime"
 	"openhands-go/server/store"
+
+	"github.com/google/uuid"
 )
 
 type ActionService struct {
 	conversationStore *store.ConversationStore
-	runtimes          map[string]runtime.Runtime
+	runtimeManager    *RuntimeManager
+	eventStreams      map[string]*EventStream
 }
 
-func NewActionService(cs *store.ConversationStore) *ActionService {
+func NewActionService(cs *store.ConversationStore, rm *RuntimeManager) *ActionService {
 	return &ActionService{
 		conversationStore: cs,
-		runtimes:          make(map[string]runtime.Runtime),
+		runtimeManager:    rm,
+		eventStreams:      make(map[string]*EventStream),
 	}
 }
 
-func (s *ActionService) ExecuteAction(ctx context.Context, conversationID string, req models.ActionRequest) (string, error) {
-	// Simple implementation: if action is "run", start a process
-	// For now, let's just use the LocalRuntime to run a command and return output
+func (s *ActionService) GetEventStream(conversationID string) *EventStream {
+	if _, ok := s.eventStreams[conversationID]; !ok {
+		s.eventStreams[conversationID] = NewEventStream()
+	}
+	return s.eventStreams[conversationID]
+}
 
+func (s *ActionService) ExecuteAction(ctx context.Context, conversationID string, req models.ActionRequest) (string, error) {
 	if req.Action != "run" {
 		return "", fmt.Errorf("unsupported action: %s", req.Action)
 	}
 
-	rt := runtime.NewLocalRuntime()
-	// In a real system, we'd keep the runtime alive in s.runtimes[conversationID]
+	// 1. Get or Create Runtime
+	rt, err := s.runtimeManager.GetRuntime(conversationID)
+	if err != nil {
+		rt, err = s.runtimeManager.CreateRuntime(ctx, conversationID)
+		if err != nil {
+			return "", err
+		}
+	}
 
-	err := rt.Start(ctx, "bash", "-c", req.Args)
+	// 2. Add Action to EventStream
+	es := s.GetEventStream(conversationID)
+	es.AddEvent(Event{
+		ID:      uuid.New().String(),
+		Type:    EventTypeAction,
+		Content: req,
+		Source:  "user",
+	})
+
+	// 3. Execute in Runtime
+	// Note: LocalRuntime currently starts a new process for every command if used via Start().
+	// But `ExecuteAction` implies a persistent session or one-off command.
+	// `LocalRuntime` implementation in `runtime.go` uses `exec.Command`, which is one-off.
+	// So we assume one-off execution for now.
+
+	err = rt.Start(ctx, "bash", "-c", req.Args)
 	if err != nil {
 		return "", err
 	}
+	// For LocalRuntime, we need to handle cleanup if it's one-off
+	// But `runtimeManager` keeps it. This mismatch needs fixing in future.
+	// For now, we just close it after use if it's not meant to be persistent shell.
 	defer rt.Close()
 
-	// Read output (blocking for now, just for POC)
+	// 4. Read Output
 	buf := make([]byte, 1024)
 	n, err := rt.Read(buf)
-	if err != nil {
-		return "", err
+	output := ""
+	if err == nil {
+		output = string(buf[:n])
 	}
 
-	return string(buf[:n]), nil
+	// 5. Add Observation to EventStream
+	es.AddEvent(Event{
+		ID:      uuid.New().String(),
+		Type:    EventTypeObservation,
+		Content: map[string]string{"output": output},
+		Source:  "runtime",
+	})
+
+	return output, nil
 }
