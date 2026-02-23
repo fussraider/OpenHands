@@ -13,6 +13,8 @@ func main() {
 
 	// API routes
 	http.HandleFunc("GET /api/options/models", handlers.ModelsHandler)
+	http.HandleFunc("GET /api/options/agents", handlers.GetAgentsHandler)
+	http.HandleFunc("GET /api/options/security-analyzers", handlers.GetSecurityAnalyzersHandler)
 
 	http.HandleFunc("GET /api/conversations", handlers.SearchConversationsHandler)
 	http.HandleFunc("POST /api/conversations", handlers.NewConversationHandler)
@@ -24,6 +26,9 @@ func main() {
 	http.HandleFunc("GET /api/conversations/{id}/trajectory", handlers.GetTrajectoryHandler)
 	http.HandleFunc("POST /api/conversations/{id}/submit-feedback", handlers.SubmitFeedbackHandler)
 
+	// Security API
+	http.HandleFunc("/api/conversations/{id}/security/{path...}", handlers.SecurityAPIHandler)
+
 	http.HandleFunc("GET /api/settings", handlers.GetSettingsHandler)
 	http.HandleFunc("POST /api/settings", handlers.StoreSettingsHandler)
 
@@ -32,6 +37,9 @@ func main() {
 	http.HandleFunc("DELETE /api/secrets/{key}", handlers.DeleteSecretHandler)
 
 	http.HandleFunc("GET /api/github/repositories", handlers.RepositoriesHandler)
+
+	// MCP Mount
+	http.HandleFunc("/mcp/", handlers.MCPSSEHandler)
 
 	http.HandleFunc("GET /health", handlers.HealthHandler)
 	http.HandleFunc("GET /alive", handlers.HealthHandler)
