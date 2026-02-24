@@ -1,11 +1,14 @@
 module openhands-go
 
-go 1.24.4
+go 1.24.0
+
+toolchain go1.24.3
 
 require (
 	github.com/creack/pty v1.1.24
 	github.com/docker/docker v25.0.5+incompatible
 	github.com/google/uuid v1.6.0
+	github.com/googollee/go-socket.io v1.7.0
 	github.com/pelletier/go-toml/v2 v2.2.4
 	github.com/tmc/langchaingo v0.1.13
 )
@@ -23,7 +26,6 @@ require (
 	github.com/gofrs/uuid v4.0.0+incompatible // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/gomodule/redigo v1.8.4 // indirect
-	github.com/googollee/go-socket.io v1.7.0 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/morikuni/aec v1.1.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect

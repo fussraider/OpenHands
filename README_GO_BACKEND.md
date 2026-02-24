@@ -13,6 +13,7 @@ It implements:
 - **Real-time Communication**: Socket.IO integration for `oh_event` (observation) and `oh_user_action` (input).
 
 Note: While functional, this is a migration work-in-progress. The agent logic is a simplified implementation compared to the Python SDK.
+**Current Limitation**: The runtime execution is currently stateless (one-off commands). Persistent shell sessions (e.g., preserving `cd` or `export`) are not yet implemented.
 
 ## Features Implemented
 

@@ -15,6 +15,8 @@ func main() {
 		log.Fatal(err)
 	}
 
+	handlers.InitHandlers()
+
 	if err := ws.InitSocketServer(handlers.ProcessSocketAction); err != nil {
 		log.Fatal(err)
 	}

@@ -7,11 +7,11 @@ import (
 	"openhands-go/server/store"
 )
 
-var settingsStore = store.NewSettingsStore("settings.json")
+var SettingsStore *store.SettingsStore
 
 func GetSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(settingsStore.Get())
+	json.NewEncoder(w).Encode(SettingsStore.Get())
 }
 
 func StoreSettingsHandler(w http.ResponseWriter, r *http.Request) {
@@ -21,7 +21,7 @@ func StoreSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := settingsStore.Update(newSettings); err != nil {
+	if err := SettingsStore.Update(newSettings); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

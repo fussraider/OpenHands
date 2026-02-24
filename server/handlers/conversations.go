@@ -8,10 +8,10 @@ import (
 	"openhands-go/server/store"
 )
 
-var conversationStore = store.NewConversationStore("conversations.json")
+var ConversationStore *store.ConversationStore
 
 func SearchConversationsHandler(w http.ResponseWriter, r *http.Request) {
-	conversations := conversationStore.ListConversations()
+	conversations := ConversationStore.ListConversations()
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(conversations)
 }
@@ -23,7 +23,7 @@ func NewConversationHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	conversation, err := conversationStore.CreateConversation(req)
+	conversation, err := ConversationStore.CreateConversation(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -32,7 +32,7 @@ func NewConversationHandler(w http.ResponseWriter, r *http.Request) {
 	// Initialize Runtime and Agent
 	// Use background context for runtime/agent lifecycle, as they outlive the request
 	ctx := context.Background()
-	_, err = runtimeManager.CreateRuntime(ctx, conversation.ConversationID)
+	_, err = RuntimeManager.CreateRuntime(ctx, conversation.ConversationID)
 	if err != nil {
 		// Log error but don't fail conversation creation?
 		// Or fail.
@@ -42,8 +42,8 @@ func NewConversationHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Start Agent Loop
 	// Need access to EventStream from ActionService?
-	es := actionService.GetEventStream(conversation.ConversationID)
-	err = runtimeManager.StartAgent(ctx, conversation.ConversationID, es)
+	es := ActionService.GetEventStream(conversation.ConversationID)
+	err = RuntimeManager.StartAgent(ctx, conversation.ConversationID, es)
 	if err != nil {
 		http.Error(w, "Failed to start agent: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -55,7 +55,7 @@ func NewConversationHandler(w http.ResponseWriter, r *http.Request) {
 
 func GetConversationHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	conversation, err := conversationStore.GetConversation(id)
+	conversation, err := ConversationStore.GetConversation(id)
 	if err != nil {
 		http.NotFound(w, r)
 		return

@@ -6,12 +6,11 @@ import (
 	"net/http"
 	"openhands-go/server/models"
 	"openhands-go/server/services"
-	"openhands-go/server/ws"
 )
 
 var (
-	runtimeManager = services.NewRuntimeManager()
-	actionService  = services.NewActionService(conversationStore, runtimeManager, ws.BroadcastEvent)
+	RuntimeManager *services.RuntimeManager
+	ActionService  *services.ActionService
 )
 
 func ExecuteActionHandler(w http.ResponseWriter, r *http.Request) {
@@ -22,7 +21,7 @@ func ExecuteActionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	output, err := actionService.ExecuteAction(r.Context(), id, req)
+	output, err := ActionService.ExecuteAction(r.Context(), id, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -36,6 +35,6 @@ func ExecuteActionHandler(w http.ResponseWriter, r *http.Request) {
 func ProcessSocketAction(conversationID string, req models.ActionRequest) error {
 	// Use background context as socket actions are async/long-lived
 	ctx := context.Background()
-	_, err := actionService.ExecuteAction(ctx, conversationID, req)
+	_, err := ActionService.ExecuteAction(ctx, conversationID, req)
 	return err
 }
