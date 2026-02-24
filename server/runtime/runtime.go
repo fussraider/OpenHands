@@ -10,16 +10,30 @@ import (
 )
 
 type LocalRuntime struct {
-	cmd *exec.Cmd
-	pty *os.File
+	cmd     *exec.Cmd
+	pty     *os.File
+	workDir string
 }
 
 func NewLocalRuntime() *LocalRuntime {
-	return &LocalRuntime{}
+	// Default to workspace/ in current directory, or env var
+	wd := os.Getenv("WORKSPACE_BASE")
+	if wd == "" {
+		wd = "workspace"
+	}
+	// Ensure directory exists
+	os.MkdirAll(wd, 0755)
+
+	return &LocalRuntime{
+		workDir: wd,
+	}
 }
 
 func (r *LocalRuntime) Start(ctx context.Context, command string, args ...string) error {
 	r.cmd = exec.CommandContext(ctx, command, args...)
+	r.cmd.Dir = r.workDir
+	// Set safe environment variables?
+	// For now inherit but verify workDir is set.
 
 	// Start the command with a PTY
 	ptmx, err := pty.Start(r.cmd)

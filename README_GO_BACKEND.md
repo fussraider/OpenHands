@@ -1,37 +1,69 @@
 # Go Backend for OpenHands
 
-This is a proof-of-concept implementation of the OpenHands backend in Go.
+This is a proof-of-concept implementation of the OpenHands backend in Go, designed to replace the existing Python backend.
+It aims to provide better performance, easier deployment, and stronger type safety.
 
 ## Status
 
-This backend implements the API structure, serves the frontend static files, and includes core agent logic.
-It implements:
-- **API Endpoints**: Settings, Conversations, Files, GitHub, Secrets.
-- **Runtime Management**: Supports Local (PTY) and Docker runtimes.
-- **Agent Logic**: Autonomous agent loop with LLM integration (using `langchaingo`).
-- **Persistence**: File-based storage for settings and conversations.
-- **Real-time Communication**: Socket.IO integration for `oh_event` (observation) and `oh_user_action` (input).
+**Current State:** 🚧 Alpha / Proof of Concept
 
-Note: While functional, this is a migration work-in-progress. The agent logic is a simplified implementation compared to the Python SDK.
-**Current Limitation**: The runtime execution is currently stateless (one-off commands). Persistent shell sessions (e.g., preserving `cd` or `export`) are not yet implemented.
+This backend implements the core API structure, serves the frontend static files, and includes a basic autonomous agent loop.
+It is functionally capable of running simple tasks but lacks the full feature set of the Python SDK (e.g., stateful shell sessions, complex agent delegation).
 
-## Features Implemented
+**License Note:** This implementation strictly follows the MIT-licensed open-source codebase. Features located in the `enterprise/` directory (under PolyForm Free Trial License) are **out of scope** and not implemented here.
 
-- **Static File Serving**: Serves the React frontend with SPA fallback.
-- **API Endpoints**:
-    - `/health`: Health check.
-    - `/api/options/models`: Returns a mock list of models.
-    - `/api/conversations`: Returns an empty list of conversations.
-    - `/api/settings`: Returns default settings.
-    - `/api/github/repositories`: Returns empty list.
-- **Socket.IO**:
-    - Supports connection on `/socket.io/`.
-    - Handles `oh_user_action` to send messages/commands.
-    - Broadcasts `oh_event` to stream execution results.
+### Implemented Features
+
+- **Frontend Serving**: Serves the React frontend build with SPA fallback.
+- **Socket.IO**: Full real-time event streaming (`oh_event`, `oh_user_action`) compatible with the frontend.
+- **Persistence**: File-based storage for:
+    - Conversations (`conversations.json`)
+    - Settings (`settings.json`)
+    - Secrets (In-memory for now)
+- **Runtime Management**:
+    - **LocalRuntime**: Executes commands locally using `os/exec`.
+    - **DockerRuntime**: Executes commands inside a Docker container using the Docker API.
+    - *Limitation*: Command execution is currently **stateless** (one-off). Environment variables and directory changes (`cd`) do not persist between commands.
+- **Agent Logic**:
+    - Basic "Loop" that fetches events and queries an LLM.
+    - Integration with `tmc/langchaingo` for LLM support.
+    - Supports `RUN` (execute command) and `MSG` (chat) actions.
+
+### API Endpoints
+
+The following REST API endpoints are implemented:
+
+| Method | Endpoint | Description | Status |
+|---|---|---|---|
+| GET | `/health`, `/alive` | Server health checks | ✅ Full |
+| GET | `/api/options/models` | List available LLM models | ✅ Mock |
+| GET | `/api/options/agents` | List available agent types | ✅ Mock |
+| GET | `/api/conversations` | List conversations | ✅ Full |
+| POST | `/api/conversations` | Create new conversation | ✅ Full |
+| GET | `/api/conversations/{id}` | Get conversation details | ✅ Full |
+| POST | `/api/conversations/{id}/action` | Execute action (legacy/rest) | ✅ Full |
+| GET | `/api/conversations/{id}/list-files` | List workspace files | ✅ Full |
+| GET | `/api/conversations/{id}/select-file` | Read file content | ✅ Full |
+| GET | `/api/settings` | Get user settings | ✅ Full |
+| POST | `/api/settings` | Update user settings | ✅ Full |
+| GET | `/api/secrets` | List secrets | ✅ Full |
+| POST | `/api/secrets` | Add secret | ✅ Full |
+| GET | `/api/github/repositories` | List GitHub repos | 🚧 Mock |
+| GET | `/api/conversations/{id}/trajectory` | Get session history | 🚧 Stub |
+| POST | `/api/conversations/{id}/feedback` | Submit feedback | 🚧 Stub |
+| GET | `/mcp/` | Model Context Protocol | 🚧 Stub |
 
 ## How to Run
 
-1.  Build the frontend:
+### Prerequisites
+
+- Go 1.23+
+- Node.js 22+ (for building frontend)
+- Docker (optional, for DockerRuntime)
+
+### Option 1: Run Locally (Dev Mode)
+
+1.  **Build Frontend:**
     ```bash
     cd frontend
     npm install
@@ -39,22 +71,51 @@ Note: While functional, this is a migration work-in-progress. The agent logic is
     cd ..
     ```
 
-2.  Run the Go server:
+2.  **Run Backend:**
     ```bash
+    # Set persistent storage path (optional, defaults to current dir)
+    export FILE_STORE_PATH=/tmp/openhands-data
+
+    # Run server
     go run cmd/server/main.go
     ```
 
-3.  Open http://localhost:3000 in your browser.
+3.  **Access:** Open http://localhost:3000
+
+### Option 2: Run with Docker Compose
+
+This will build the complete image (Frontend + Go Backend) and run it.
+
+```bash
+docker-compose up --build
+```
+*Note: Ensure `docker-compose.yml` points to the correct Dockerfile or update the build context if needed.*
+
+## Configuration
+
+The server is configured via `config.toml` or Environment Variables.
+Env vars take precedence.
+
+| Env Var | Description | Default |
+|---|---|---|
+| `OPENHANDS_HOST` | Server bind address | `127.0.0.1` (or `0.0.0.0` in Docker) |
+| `OPENHANDS_PORT` | Server port | `3000` |
+| `FILE_STORE_PATH`| Directory for JSON DB files | Current directory |
+| `LLM_MODEL` | LLM Model name | `gpt-4` |
+| `LLM_API_KEY` | LLM API Key | - |
+| `LLM_BASE_URL` | Custom LLM Base URL | - |
+| `SANDBOX_RUNTIME`| `local` or `docker` | `local` |
 
 ## Testing
 
-- **Go Tests**:
+- **Unit Tests (Go):**
     ```bash
     go test ./...
     ```
 
-- **Frontend Integration Test**:
+- **Integration Tests (Frontend + Backend):**
     ```bash
+    # Ensure backend is running on port 3000
     cd frontend
     npx playwright test tests/go_backend.spec.ts
     ```
