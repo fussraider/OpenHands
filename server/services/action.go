@@ -14,24 +14,44 @@ type ActionService struct {
 	conversationStore *store.ConversationStore
 	runtimeManager    *RuntimeManager
 	eventStreams      map[string]*events.EventStream
+	eventBroadcaster  func(string, events.Event)
 }
 
-func NewActionService(cs *store.ConversationStore, rm *RuntimeManager) *ActionService {
+func NewActionService(cs *store.ConversationStore, rm *RuntimeManager, broadcaster func(string, events.Event)) *ActionService {
 	return &ActionService{
 		conversationStore: cs,
 		runtimeManager:    rm,
 		eventStreams:      make(map[string]*events.EventStream),
+		eventBroadcaster:  broadcaster,
 	}
 }
 
 func (s *ActionService) GetEventStream(conversationID string) *events.EventStream {
 	if _, ok := s.eventStreams[conversationID]; !ok {
-		s.eventStreams[conversationID] = events.NewEventStream()
+		es := events.NewEventStream(conversationID)
+		if s.eventBroadcaster != nil {
+			es.Subscribe(func(event events.Event) {
+				s.eventBroadcaster(conversationID, event)
+			})
+		}
+		s.eventStreams[conversationID] = es
 	}
 	return s.eventStreams[conversationID]
 }
 
 func (s *ActionService) ExecuteAction(ctx context.Context, conversationID string, req models.ActionRequest) (string, error) {
+	if req.Action == "message" {
+		// Just add to event stream, agent will pick it up
+		es := s.GetEventStream(conversationID)
+		es.AddEvent(events.Event{
+			ID:      uuid.New().String(),
+			Type:    events.EventTypeAction,
+			Content: req, // {action: "message", args: "msg"}
+			Source:  "user",
+		})
+		return "", nil
+	}
+
 	if req.Action != "run" {
 		return "", fmt.Errorf("unsupported action: %s", req.Action)
 	}

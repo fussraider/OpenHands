@@ -21,14 +21,24 @@ type Event struct {
 }
 
 type EventStream struct {
-	mu     sync.RWMutex
-	events []Event
+	mu            sync.RWMutex
+	events        []Event
+	conversationID string
+	subscribers   []func(Event)
 }
 
-func NewEventStream() *EventStream {
+func NewEventStream(conversationID string) *EventStream {
 	return &EventStream{
-		events: make([]Event, 0),
+		events:         make([]Event, 0),
+		conversationID: conversationID,
+		subscribers:    make([]func(Event), 0),
 	}
+}
+
+func (es *EventStream) Subscribe(callback func(Event)) {
+	es.mu.Lock()
+	defer es.mu.Unlock()
+	es.subscribers = append(es.subscribers, callback)
 }
 
 func (es *EventStream) AddEvent(event Event) {
@@ -36,6 +46,12 @@ func (es *EventStream) AddEvent(event Event) {
 	defer es.mu.Unlock()
 	event.Timestamp = time.Now()
 	es.events = append(es.events, event)
+
+	// Notify subscribers
+	for _, sub := range es.subscribers {
+		// Run in goroutine to avoid blocking
+		go sub(event)
+	}
 }
 
 func (es *EventStream) GetEvents() []Event {

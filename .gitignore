@@ -233,6 +233,7 @@ yarn-debug.log*
 yarn-error.log*
 
 logs
+*.log
 
 # agent
 .envrc
@@ -265,3 +266,4 @@ test-results
 main
 settings.json
 conversations.json
+server.log

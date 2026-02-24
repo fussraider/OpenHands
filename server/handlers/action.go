@@ -1,15 +1,17 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"openhands-go/server/models"
 	"openhands-go/server/services"
+	"openhands-go/server/ws"
 )
 
 var (
 	runtimeManager = services.NewRuntimeManager()
-	actionService  = services.NewActionService(conversationStore, runtimeManager)
+	actionService  = services.NewActionService(conversationStore, runtimeManager, ws.BroadcastEvent)
 )
 
 func ExecuteActionHandler(w http.ResponseWriter, r *http.Request) {
@@ -28,4 +30,12 @@ func ExecuteActionHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"output": output})
+}
+
+// ProcessSocketAction handles actions coming from Socket.IO
+func ProcessSocketAction(conversationID string, req models.ActionRequest) error {
+	// Use background context as socket actions are async/long-lived
+	ctx := context.Background()
+	_, err := actionService.ExecuteAction(ctx, conversationID, req)
+	return err
 }

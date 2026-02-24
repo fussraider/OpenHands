@@ -10,6 +10,7 @@ It implements:
 - **Runtime Management**: Supports Local (PTY) and Docker runtimes.
 - **Agent Logic**: Autonomous agent loop with LLM integration (using `langchaingo`).
 - **Persistence**: File-based storage for settings and conversations.
+- **Real-time Communication**: Socket.IO integration for `oh_event` (observation) and `oh_user_action` (input).
 
 Note: While functional, this is a migration work-in-progress. The agent logic is a simplified implementation compared to the Python SDK.
 
@@ -22,6 +23,10 @@ Note: While functional, this is a migration work-in-progress. The agent logic is
     - `/api/conversations`: Returns an empty list of conversations.
     - `/api/settings`: Returns default settings.
     - `/api/github/repositories`: Returns empty list.
+- **Socket.IO**:
+    - Supports connection on `/socket.io/`.
+    - Handles `oh_user_action` to send messages/commands.
+    - Broadcasts `oh_event` to stream execution results.
 
 ## How to Run
 
@@ -44,11 +49,11 @@ Note: While functional, this is a migration work-in-progress. The agent logic is
 
 - **Go Tests**:
     ```bash
-    go test -v
+    go test ./...
     ```
 
 - **Frontend Integration Test**:
     ```bash
     cd frontend
-    npx playwright test tests/go_backend.spec.ts --config=playwright.go.config.ts
+    npx playwright test tests/go_backend.spec.ts
     ```

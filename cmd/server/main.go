@@ -7,6 +7,7 @@ import (
 	"openhands-go/server/config"
 	"openhands-go/server/handlers"
 	"openhands-go/server/middleware"
+	"openhands-go/server/ws"
 )
 
 func main() {
@@ -14,7 +15,14 @@ func main() {
 		log.Fatal(err)
 	}
 
+	if err := ws.InitSocketServer(handlers.ProcessSocketAction); err != nil {
+		log.Fatal(err)
+	}
+
 	mux := http.NewServeMux()
+
+	// Socket.IO
+	mux.Handle("/socket.io/", ws.Server)
 
 	// API routes
 	mux.HandleFunc("GET /api/options/models", handlers.ModelsHandler)
