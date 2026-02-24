@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"openhands-go/server/events"
 	"openhands-go/server/models"
 	"openhands-go/server/store"
 
@@ -12,20 +13,20 @@ import (
 type ActionService struct {
 	conversationStore *store.ConversationStore
 	runtimeManager    *RuntimeManager
-	eventStreams      map[string]*EventStream
+	eventStreams      map[string]*events.EventStream
 }
 
 func NewActionService(cs *store.ConversationStore, rm *RuntimeManager) *ActionService {
 	return &ActionService{
 		conversationStore: cs,
 		runtimeManager:    rm,
-		eventStreams:      make(map[string]*EventStream),
+		eventStreams:      make(map[string]*events.EventStream),
 	}
 }
 
-func (s *ActionService) GetEventStream(conversationID string) *EventStream {
+func (s *ActionService) GetEventStream(conversationID string) *events.EventStream {
 	if _, ok := s.eventStreams[conversationID]; !ok {
-		s.eventStreams[conversationID] = NewEventStream()
+		s.eventStreams[conversationID] = events.NewEventStream()
 	}
 	return s.eventStreams[conversationID]
 }
@@ -46,9 +47,9 @@ func (s *ActionService) ExecuteAction(ctx context.Context, conversationID string
 
 	// 2. Add Action to EventStream
 	es := s.GetEventStream(conversationID)
-	es.AddEvent(Event{
+	es.AddEvent(events.Event{
 		ID:      uuid.New().String(),
-		Type:    EventTypeAction,
+		Type:    events.EventTypeAction,
 		Content: req,
 		Source:  "user",
 	})
@@ -77,9 +78,9 @@ func (s *ActionService) ExecuteAction(ctx context.Context, conversationID string
 	}
 
 	// 5. Add Observation to EventStream
-	es.AddEvent(Event{
+	es.AddEvent(events.Event{
 		ID:      uuid.New().String(),
-		Type:    EventTypeObservation,
+		Type:    events.EventTypeObservation,
 		Content: map[string]string{"output": output},
 		Source:  "runtime",
 	})

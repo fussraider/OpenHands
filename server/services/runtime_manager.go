@@ -3,7 +3,10 @@ package services
 import (
 	"context"
 	"errors"
+	"openhands-go/server/agent"
 	"openhands-go/server/config"
+	"openhands-go/server/events"
+	"openhands-go/server/llm"
 	"openhands-go/server/runtime"
 	"sync"
 )
@@ -11,11 +14,13 @@ import (
 type RuntimeManager struct {
 	mu       sync.RWMutex
 	runtimes map[string]runtime.Runtime
+	agents   map[string]*agent.Agent
 }
 
 func NewRuntimeManager() *RuntimeManager {
 	return &RuntimeManager{
 		runtimes: make(map[string]runtime.Runtime),
+		agents:   make(map[string]*agent.Agent),
 	}
 }
 
@@ -56,6 +61,30 @@ func (rm *RuntimeManager) CreateRuntime(ctx context.Context, conversationID stri
 	return rt, nil
 }
 
+func (rm *RuntimeManager) StartAgent(ctx context.Context, conversationID string, es *events.EventStream) error {
+	rm.mu.Lock()
+	defer rm.mu.Unlock()
+
+	if _, ok := rm.agents[conversationID]; ok {
+		return nil // Already started
+	}
+
+	rt, ok := rm.runtimes[conversationID]
+	if !ok {
+		return errors.New("runtime must be created before starting agent")
+	}
+
+	llmService := llm.NewLLMService(config.AppConfig.LLM)
+	ag := agent.NewAgent("default-agent", conversationID, llmService, rt, es)
+
+	rm.agents[conversationID] = ag
+
+	// Start loop in background
+	go ag.RunLoop(ctx)
+
+	return nil
+}
+
 func (rm *RuntimeManager) StopRuntime(conversationID string) error {
 	rm.mu.Lock()
 	defer rm.mu.Unlock()
@@ -70,5 +99,8 @@ func (rm *RuntimeManager) StopRuntime(conversationID string) error {
 	}
 
 	delete(rm.runtimes, conversationID)
+	// Agents should also be stopped/cleaned up (ctx cancellation handled by caller typically, but here we might need explicit stop)
+	delete(rm.agents, conversationID)
+
 	return nil
 }

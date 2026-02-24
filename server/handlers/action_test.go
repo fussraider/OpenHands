@@ -5,11 +5,19 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"openhands-go/server/config"
 	"openhands-go/server/models"
 	"testing"
 )
 
 func TestExecuteActionHandler(t *testing.T) {
+	// Initialize config for testing (avoid nil pointer dereference)
+	config.AppConfig = &config.Config{
+		Sandbox: config.SandboxConfig{
+			Runtime: "local",
+		},
+	}
+
 	reqBody := models.ActionRequest{
 		Action: "run",
 		Args:   "echo 'hello world'",
@@ -34,13 +42,4 @@ func TestExecuteActionHandler(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Errorf("handler returned invalid JSON: %v", err)
 	}
-
-	// Output might contain PTY control characters or newline, so check substring
-	// But local runtime might not work in CI/docker environment without PTY support or deps?
-	// The `pty` library usually works on Linux.
-	// Let's assume it works or we catch error.
-	// Actually, if `pty` fails to start (e.g. no pty available), it returns 500.
-
-	// If the test environment doesn't support PTY, we might get an error.
-	// But for now, let's see.
 }

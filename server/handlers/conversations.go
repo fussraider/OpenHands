@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"openhands-go/server/models"
@@ -25,6 +26,26 @@ func NewConversationHandler(w http.ResponseWriter, r *http.Request) {
 	conversation, err := conversationStore.CreateConversation(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Initialize Runtime and Agent
+	// Use background context for runtime/agent lifecycle, as they outlive the request
+	ctx := context.Background()
+	_, err = runtimeManager.CreateRuntime(ctx, conversation.ConversationID)
+	if err != nil {
+		// Log error but don't fail conversation creation?
+		// Or fail.
+		http.Error(w, "Failed to create runtime: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Start Agent Loop
+	// Need access to EventStream from ActionService?
+	es := actionService.GetEventStream(conversation.ConversationID)
+	err = runtimeManager.StartAgent(ctx, conversation.ConversationID, es)
+	if err != nil {
+		http.Error(w, "Failed to start agent: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
