@@ -4,9 +4,14 @@ This is a proof-of-concept implementation of the OpenHands backend in Go.
 
 ## Status
 
-This backend currently implements the API structure and serves the frontend static files.
-It **does not** yet implement the core agent logic, runtime management, or LLM integration.
-These components are complex and tightly coupled with the Python SDK.
+This backend implements the API structure, serves the frontend static files, and includes core agent logic.
+It implements:
+- **API Endpoints**: Settings, Conversations, Files, GitHub, Secrets.
+- **Runtime Management**: Supports Local (PTY) and Docker runtimes.
+- **Agent Logic**: Autonomous agent loop with LLM integration (using `langchaingo`).
+- **Persistence**: File-based storage for settings and conversations.
+
+Note: While functional, this is a migration work-in-progress. The agent logic is a simplified implementation compared to the Python SDK.
 
 ## Features Implemented
 

@@ -74,7 +74,10 @@ func (rm *RuntimeManager) StartAgent(ctx context.Context, conversationID string,
 		return errors.New("runtime must be created before starting agent")
 	}
 
-	llmService := llm.NewLLMService(config.AppConfig.LLM)
+	llmService, err := llm.NewLLMService(config.AppConfig.LLM)
+	if err != nil {
+		return err
+	}
 	ag := agent.NewAgent("default-agent", conversationID, llmService, rt, es)
 
 	rm.agents[conversationID] = ag

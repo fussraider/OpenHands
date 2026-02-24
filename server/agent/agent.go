@@ -37,7 +37,7 @@ func (a *Agent) Step(ctx context.Context) error {
 	messages := a.eventsToMessages(history)
 
 	// 2. LLM Completion
-	responseContent, err := a.LLM.Complete(messages)
+	responseContent, err := a.LLM.Complete(ctx, messages)
 	if err != nil {
 		return err
 	}
@@ -56,6 +56,11 @@ func (a *Agent) Step(ctx context.Context) error {
 
 	// 4. Execute Action
 	if action == "run" {
+		// For One-off command execution (LocalRuntime style):
+		// We Start, Read, and then ideally should ensure resources are closed/waited.
+		// Note: Runtime interface Start implies a new command.
+		// DockerRuntime implementation currently keeps container alive but Execs new command.
+
 		err := a.Runtime.Start(ctx, "bash", "-c", content)
 		output := ""
 		if err != nil {
@@ -68,6 +73,20 @@ func (a *Agent) Step(ctx context.Context) error {
 			} else {
 				output = string(buf[:n])
 			}
+			// Close/Cleanup the runtime execution if applicable (mainly for PTY/Process cleanup)
+			// But Runtime interface doesn't have a "StopCommand" method separate from Close.
+			// Ideally, Runtime should support Execute(cmd) -> (stdout, stderr, err)
+			// For now, assume Runtime handles internal state or is persistent.
+			// DockerRuntime uses Exec, so multiple Start() calls are fine.
+			// LocalRuntime uses PTY, so Start() overwrites the previous command.
+			// Calling Close() here would kill the runtime instance entirely?
+			// No, Close() in LocalRuntime kills the process.
+			// If we want to keep the "Runtime" alive as a session, we shouldn't close it?
+			// But LocalRuntime overwrites r.cmd.
+			// To avoid resource leaks (zombies) in LocalRuntime, we should call Close() or Wait() on the *command*, not the *runtime* if runtime represents environment.
+			// Given current LocalRuntime implementation, Close() kills the process.
+			// Let's call Close() to ensure we don't leave zombie processes, as Agent Step assumes "Run command and get output".
+			a.Runtime.Close()
 		}
 
 		// Add Observation

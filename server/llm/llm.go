@@ -1,26 +1,49 @@
 package llm
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
 	"fmt"
-	"net/http"
 	"openhands-go/server/config"
-	"time"
+
+	"github.com/tmc/langchaingo/llms"
+	"github.com/tmc/langchaingo/llms/openai"
 )
 
 type LLMService struct {
 	config config.LLMConfig
-	client *http.Client
+	model  llms.Model
 }
 
-func NewLLMService(cfg config.LLMConfig) *LLMService {
+func NewLLMService(cfg config.LLMConfig) (*LLMService, error) {
+	// If API Key is empty, we might want to return a mock or error.
+	// For now, let's assume OpenAI compatible if Key/BaseURL are present.
+
+	// If no API Key, we can't really initialize a real LLM.
+	// We'll handle this in Complete or return a mock implementation of llms.Model if needed.
+	// But `langchaingo` generally requires valid config.
+
+	var model llms.Model
+	var err error
+
+	if cfg.APIKey != "" {
+		opts := []openai.Option{
+			openai.WithToken(cfg.APIKey),
+			openai.WithModel(cfg.Model),
+		}
+		if cfg.BaseURL != "" {
+			opts = append(opts, openai.WithBaseURL(cfg.BaseURL))
+		}
+
+		model, err = openai.New(opts...)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &LLMService{
 		config: cfg,
-		client: &http.Client{
-			Timeout: 60 * time.Second,
-		},
-	}
+		model:  model,
+	}, nil
 }
 
 type Message struct {
@@ -28,60 +51,33 @@ type Message struct {
 	Content string `json:"content"`
 }
 
-type CompletionRequest struct {
-	Model    string    `json:"model"`
-	Messages []Message `json:"messages"`
-}
-
-type CompletionResponse struct {
-	Choices []struct {
-		Message Message `json:"message"`
-	} `json:"choices"`
-}
-
-func (s *LLMService) Complete(messages []Message) (string, error) {
+func (s *LLMService) Complete(ctx context.Context, messages []Message) (string, error) {
 	// Mock implementation if no API Key (for testing/dev)
-	if s.config.APIKey == "" {
-		return "This is a mock response from the Go backend LLM service.", nil
+	if s.model == nil {
+		return "This is a mock response from the Go backend LLM service (langchaingo integration pending config).", nil
 	}
 
-	reqBody := CompletionRequest{
-		Model:    s.config.Model,
-		Messages: messages,
+	// Convert messages to langchaingo format
+	content := []llms.MessageContent{}
+	for _, msg := range messages {
+		role := llms.ChatMessageTypeHuman
+		if msg.Role == "system" {
+			role = llms.ChatMessageTypeSystem
+		} else if msg.Role == "assistant" {
+			role = llms.ChatMessageTypeAI
+		}
+
+		content = append(content, llms.TextParts(role, msg.Content))
 	}
 
-	jsonBody, err := json.Marshal(reqBody)
+	completion, err := s.model.GenerateContent(ctx, content)
 	if err != nil {
 		return "", err
 	}
 
-	url := s.config.BaseURL + "/chat/completions" // Assumption for OpenAI-compatible API
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
-	if err != nil {
-		return "", err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+s.config.APIKey)
-
-	resp, err := s.client.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("LLM API returned status: %d", resp.StatusCode)
-	}
-
-	var completionResp CompletionResponse
-	if err := json.NewDecoder(resp.Body).Decode(&completionResp); err != nil {
-		return "", err
-	}
-
-	if len(completionResp.Choices) == 0 {
+	if len(completion.Choices) == 0 {
 		return "", fmt.Errorf("no choices in LLM response")
 	}
 
-	return completionResp.Choices[0].Message.Content, nil
+	return completion.Choices[0].Content, nil
 }
