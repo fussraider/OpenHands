@@ -9,7 +9,7 @@ This file tracks the migration status of OpenHands backend features from Python 
 | Models List | `openhands/server/routes/settings.py` (indirectly) | `server/handlers/common.go` | ✅ Complete | Mock list returned. |
 | Conversations | `openhands/server/routes/conversation.py` | `server/handlers/conversations.go` | ✅ Complete | File-based conversation persistence implemented. |
 | Static Files | `openhands/server/app.py` (config) | `server/handlers/static.go` | ✅ Complete | Serving frontend build with SPA fallback. |
-| Github Integration | `openhands/server/routes/git.py` | `server/handlers/github.go` | 🚧 In Progress | Mock endpoint implemented. |
+| Github Integration | `openhands/server/routes/git.py` | `server/handlers/github.go` | ✅ Complete | Implemented using `google/go-github`. |
 | Files API | `openhands/server/routes/files.py` | `server/handlers/files.go` | ✅ Complete | Local workspace access implemented with security checks. |
 | Secrets API | `openhands/server/routes/secrets.py` | `server/handlers/secrets.go` | ✅ Complete | In-memory secrets store implemented. |
 | Feedback API | `openhands/server/routes/feedback.py` | `server/handlers/feedback.go` | ✅ Complete | Stub implementation. |
@@ -32,7 +32,7 @@ The following features exist in the Python codebase but are not yet implemented 
 | **Agent** | **Complex Agent Logic** | ✅ Complete | `openhands/core/agent/` | Implemented `CodeActAgent` logic with tool calling (`execute_bash`) and multi-turn reasoning using `langchaingo`. |
 | **Agent** | **Delegation** | 🟡 Medium | `openhands/agenthub/` | Support for delegating tasks to sub-agents. |
 | **Events** | **Rich Event Types** | 🟡 Medium | `openhands/events/` | Expand `Event` struct to support specific Action/Observation types (e.g., `CmdRunAction`, `CmdOutputObservation`) with proper validation. |
-| **API** | **Real GitHub Auth** | 🟡 Medium | `openhands/server/routes/git.py` | Implement actual OAuth flow for GitHub integration. |
+| **API** | **Real GitHub Auth** | ✅ Complete | `openhands/server/routes/git.py` | Implemented actual OAuth token usage via `GithubService`. |
 | **Security** | **Sandboxing** | 🔴 Critical | `openhands/runtime/` | Ensure robust isolation for `LocalRuntime` (e.g., using Firejail or similar if running outside Docker). |
 | **Observability** | **Structured Logging** | 🟢 Low | `openhands/core/logger.py` | Replace standard `log` with structured logger (e.g., `slog` or `zap`). |
 | **Enterprise** | **Multi-tenancy** | ⛔ Out of Scope | `enterprise/server/` | **DO NOT IMPLEMENT**. Enterprise feature. |

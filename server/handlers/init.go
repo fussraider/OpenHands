@@ -20,4 +20,5 @@ func InitHandlers() {
 
 	RuntimeManager = services.NewRuntimeManager()
 	ActionService = services.NewActionService(ConversationStore, RuntimeManager, ws.BroadcastEvent)
+	GithubService = services.NewGithubService(config.AppConfig.Github)
 }
