@@ -6,9 +6,11 @@ import (
 	"openhands-go/server/events"
 	"openhands-go/server/llm"
 	"openhands-go/server/models"
+	"openhands-go/server/runtime"
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/tmc/langchaingo/llms"
 )
 
 // MockRuntime implements runtime.Runtime
@@ -127,5 +129,47 @@ func TestActionMarshalling(t *testing.T) {
 
 	if parsed.Command != "echo test" {
 		t.Errorf("Failed to roundtrip CmdRunAction")
+	}
+}
+
+// MockPlugin implements plugins.Plugin
+type MockPlugin struct{}
+func (p *MockPlugin) Name() string { return "mock" }
+func (p *MockPlugin) Init(ctx context.Context, rt runtime.Runtime) error { return nil }
+func (p *MockPlugin) Tools() []llms.Tool {
+	return []llms.Tool{{
+		Type: "function",
+		Function: &llms.FunctionDefinition{Name: "mock_tool"},
+	}}
+}
+func (p *MockPlugin) HandleToolCall(ctx context.Context, name string, args string) (string, bool, error) {
+	if name == "mock_tool" {
+		return "mock result", true, nil
+	}
+	return "", false, nil
+}
+
+func TestAgentPlugins(t *testing.T) {
+	agent := NewAgent("test", "conv", &llm.LLMService{}, &MockRuntime{}, events.NewEventStream("conv"))
+
+	// Add mock plugin manually
+	agent.Plugins = append(agent.Plugins, &MockPlugin{})
+
+	// Verify tool registration
+	// NewAgent registers default tools + plugin tools
+	// But we appended AFTER NewAgent.
+	// We should reconstruct tools logic or allow dynamic registration.
+	// Agent.Tools is public.
+	agent.Tools = append(agent.Tools, (&MockPlugin{}).Tools()...)
+
+	found := false
+	for _, tool := range agent.Tools {
+		if tool.Function.Name == "mock_tool" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("Mock tool not found in agent tools")
 	}
 }

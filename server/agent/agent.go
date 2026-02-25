@@ -9,6 +9,8 @@ import (
 	"openhands-go/server/llm"
 	"openhands-go/server/models"
 	"openhands-go/server/runtime"
+	"openhands-go/server/runtime/plugins"
+	"openhands-go/server/runtime/plugins/jupyter"
 	"time"
 
 	"github.com/google/uuid"
@@ -23,10 +25,37 @@ type Agent struct {
 	EventStream    *events.EventStream
 	SystemPrompt   string
 	Tools          []llms.Tool
+	Plugins        []plugins.Plugin
 }
 
 func NewAgent(id, conversationID string, llmService *llm.LLMService, rt runtime.Runtime, es *events.EventStream) *Agent {
-	// Define execute_bash tool
+	// Initialize Plugins
+	plugs := []plugins.Plugin{
+		jupyter.NewJupyterPlugin(),
+	}
+
+	// Initialize plugins with runtime
+	// We use a background context for init, or pass context?
+	// NewAgent doesn't take context. We'll init lazily or just ignore context for now?
+	// `Init` takes context. We should probably init in `RunLoop` or `Step` if not initialized?
+	// Or change NewAgent signature.
+	// For now, let's do best effort init here or in RunLoop.
+	// Better in RunLoop or separate method.
+
+	agent := &Agent{
+		ID:             id,
+		ConversationID: conversationID,
+		LLM:            llmService,
+		Runtime:        rt,
+		EventStream:    es,
+		SystemPrompt:   "You are a helpful coding agent using the CodeAct framework. You can execute bash commands to solve tasks. When you are done, call finish.",
+		Plugins:        plugs,
+	}
+
+	// Collect tools
+	tools := []llms.Tool{}
+
+	// Default tools
 	bashTool := llms.Tool{
 		Type: "function",
 		Function: &llms.FunctionDefinition{
@@ -48,7 +77,6 @@ func NewAgent(id, conversationID string, llmService *llm.LLMService, rt runtime.
 			},
 		},
 	}
-
 	finishTool := llms.Tool{
 		Type: "function",
 		Function: &llms.FunctionDefinition{
@@ -65,16 +93,15 @@ func NewAgent(id, conversationID string, llmService *llm.LLMService, rt runtime.
 			},
 		},
 	}
+	tools = append(tools, bashTool, finishTool)
 
-	return &Agent{
-		ID:             id,
-		ConversationID: conversationID,
-		LLM:            llmService,
-		Runtime:        rt,
-		EventStream:    es,
-		SystemPrompt:   "You are a helpful coding agent using the CodeAct framework. You can execute bash commands to solve tasks. When you are done, call finish.",
-		Tools:          []llms.Tool{bashTool, finishTool},
+	// Plugin tools
+	for _, p := range plugs {
+		tools = append(tools, p.Tools()...)
 	}
+
+	agent.Tools = tools
+	return agent
 }
 
 func (a *Agent) Step(ctx context.Context) error {
@@ -83,7 +110,6 @@ func (a *Agent) Step(ctx context.Context) error {
 	messages := a.eventsToMessages(history)
 
 	// 2. LLM Completion
-	// CodeActAgent uses tool calling.
 	resp, err := a.LLM.CompleteWithTools(ctx, messages, a.Tools)
 	if err != nil {
 		return fmt.Errorf("LLM completion error: %w", err)
@@ -92,57 +118,40 @@ func (a *Agent) Step(ctx context.Context) error {
 	// 3. Handle Tool Calls
 	if len(resp.ToolCalls) > 0 {
 		for _, tc := range resp.ToolCalls {
+			handled := false
+
+			// Built-in tools
 			switch tc.FunctionCall.Name {
 			case "execute_bash":
+				handled = true
 				var args struct {
 					Command string `json:"command"`
 					Thought string `json:"thought"`
 				}
 				if err := json.Unmarshal([]byte(tc.FunctionCall.Arguments), &args); err != nil {
 					log.Printf("Error unmarshalling execute_bash args: %v", err)
+					// Record error output?
+					a.recordObservation(tc.ID, fmt.Sprintf("Error unmarshalling args: %v", err), "run")
 					continue
 				}
 
-				// Create CmdRunAction event
-				action := models.CmdRunAction{
+				a.recordAction(models.CmdRunAction{
 					Action:     models.ActionTypeCmdRun,
 					Command:    args.Command,
 					Thought:    args.Thought,
 					ToolCallID: tc.ID,
-				}
-
-				a.EventStream.AddEvent(events.Event{
-					ID:      uuid.New().String(),
-					Type:    events.EventTypeAction,
-					Content: action,
-					Source:  "agent",
 				})
 
-				// Execute
 				output, exitCode, err := a.Runtime.Execute(ctx, "bash", "-c", args.Command)
 				content := output
 				if err != nil {
 					content = fmt.Sprintf("Error executing command: %v", err)
 				}
 
-				// Create Observation event
-				obs := models.CmdOutputObservation{
-					Observation: "run",
-					Content:     content,
-					Metadata: models.CmdOutputMetadata{
-						ExitCode: exitCode,
-					},
-					Command:    args.Command,
-					ToolCallID: tc.ID,
-				}
-				a.EventStream.AddEvent(events.Event{
-					ID:      uuid.New().String(),
-					Type:    events.EventTypeObservation,
-					Content: obs,
-					Source:  "runtime",
-				})
+				a.recordObservation(tc.ID, content, "run", exitCode, args.Command)
 
 			case "finish":
+				handled = true
 				a.EventStream.AddEvent(events.Event{
 					ID:      uuid.New().String(),
 					Type:    events.EventTypeAction,
@@ -151,11 +160,35 @@ func (a *Agent) Step(ctx context.Context) error {
 					},
 					Source: "agent",
 				})
-				// Ideally stop the loop
+			}
+
+			// Plugin tools
+			if !handled {
+				for _, p := range a.Plugins {
+					output, ok, err := p.HandleToolCall(ctx, tc.FunctionCall.Name, tc.FunctionCall.Arguments)
+					if ok {
+						handled = true
+						if err != nil {
+							output = fmt.Sprintf("Plugin error: %v", err)
+						}
+						// Record observation
+						// We need a generic observation type or reuse CmdOutputObservation?
+						// CmdOutputObservation is tailored for bash.
+						// Let's use it for now or make it generic.
+						// For IPython, it's similar (code execution).
+						a.recordObservation(tc.ID, output, "run_ipython")
+						// Note: metadata exit code 0 for success
+						break
+					}
+				}
+			}
+
+			if !handled {
+				// Unknown tool
+				a.recordObservation(tc.ID, fmt.Sprintf("Unknown tool: %s", tc.FunctionCall.Name), "error")
 			}
 		}
 	} else if resp.Content != "" {
-		// Just a message
 		a.EventStream.AddEvent(events.Event{
 			ID:      uuid.New().String(),
 			Type:    events.EventTypeAction,
@@ -170,6 +203,43 @@ func (a *Agent) Step(ctx context.Context) error {
 	return nil
 }
 
+func (a *Agent) recordAction(content interface{}) {
+	a.EventStream.AddEvent(events.Event{
+		ID:      uuid.New().String(),
+		Type:    events.EventTypeAction,
+		Content: content,
+		Source:  "agent",
+	})
+}
+
+func (a *Agent) recordObservation(toolCallID, content, obsType string, extras ...interface{}) {
+	// Extras: [exitCode, command]
+	exitCode := 0
+	command := ""
+	if len(extras) > 0 {
+		exitCode = extras[0].(int)
+	}
+	if len(extras) > 1 {
+		command = extras[1].(string)
+	}
+
+	obs := models.CmdOutputObservation{
+		Observation: obsType,
+		Content:     content,
+		Metadata: models.CmdOutputMetadata{
+			ExitCode: exitCode,
+		},
+		Command:    command,
+		ToolCallID: toolCallID,
+	}
+	a.EventStream.AddEvent(events.Event{
+		ID:      uuid.New().String(),
+		Type:    events.EventTypeObservation,
+		Content: obs,
+		Source:  "runtime",
+	})
+}
+
 func (a *Agent) eventsToMessages(evts []events.Event) []llm.Message {
 	msgs := []llm.Message{
 		{Role: "system", Content: a.SystemPrompt},
@@ -178,28 +248,12 @@ func (a *Agent) eventsToMessages(evts []events.Event) []llm.Message {
 	for _, e := range evts {
 		switch e.Type {
 		case events.EventTypeAction:
-			// Handle different action types
-			// We need to check the Content type carefully.
-			// It might be map[string]interface{} (from JSON unmarshal) or struct (from AddEvent)
-			// Using fmt.Sprintf("%v") is risky for structured data.
-			// Ideally we should unmarshal it to specific types.
-
-			// For now, let's assume simple cases or marshal back to JSON
 			bytes, _ := json.Marshal(e.Content)
 
-			// Determine role
-			// role := "user"
-			// if e.Source == "agent" {
-			// 	role = "assistant"
-			// }
-
-			// If it's a Tool Call (Agent Action with ToolCallID)
-			// We need to reconstruct the ToolCall object for LLM history
 			if e.Source == "agent" {
-				// Try to parse as CmdRunAction
+				// CmdRunAction
 				var cmdAction models.CmdRunAction
 				if err := json.Unmarshal(bytes, &cmdAction); err == nil && cmdAction.Action == models.ActionTypeCmdRun {
-					// It's a tool call
 					msgs = append(msgs, llm.Message{
 						Role: "assistant",
 						ToolCalls: []llms.ToolCall{
@@ -215,14 +269,6 @@ func (a *Agent) eventsToMessages(evts []events.Event) []llm.Message {
 					})
 					continue
 				}
-				// Finish action
-				var finishAction models.AgentFinishAction
-				if err := json.Unmarshal(bytes, &finishAction); err == nil && finishAction.Action == models.ActionTypeAgentFinish {
-					// Finish tool call
-					// Logic similar to above
-					continue
-				}
-
 				// Message Action
 				var msgAction models.MessageAction
 				if err := json.Unmarshal(bytes, &msgAction); err == nil && msgAction.Action == models.ActionTypeMessage {
@@ -234,9 +280,6 @@ func (a *Agent) eventsToMessages(evts []events.Event) []llm.Message {
 				}
 			} else {
 				// User action
-				// e.g. Initial message or user feedback
-				// If e.Content is a struct, unmarshal/marshal
-				// Assuming simple user message for now if source is user
 				var msgAction models.MessageAction
 				if err := json.Unmarshal(bytes, &msgAction); err == nil {
 					msgs = append(msgs, llm.Message{
@@ -245,8 +288,6 @@ func (a *Agent) eventsToMessages(evts []events.Event) []llm.Message {
 					})
 					continue
 				}
-
-				// Fallback
 				msgs = append(msgs, llm.Message{
 					Role:    "user",
 					Content: string(bytes),
@@ -254,7 +295,6 @@ func (a *Agent) eventsToMessages(evts []events.Event) []llm.Message {
 			}
 
 		case events.EventTypeObservation:
-			// Tool Output
 			bytes, _ := json.Marshal(e.Content)
 			var obs models.CmdOutputObservation
 			if err := json.Unmarshal(bytes, &obs); err == nil {
@@ -271,6 +311,13 @@ func (a *Agent) eventsToMessages(evts []events.Event) []llm.Message {
 
 func (a *Agent) RunLoop(ctx context.Context) {
 	log.Printf("Starting CodeAct agent loop for conversation %s", a.ConversationID)
+	// Init plugins
+	for _, p := range a.Plugins {
+		if err := p.Init(ctx, a.Runtime); err != nil {
+			log.Printf("Failed to init plugin %s: %v", p.Name(), err)
+		}
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
