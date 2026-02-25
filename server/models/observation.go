@@ -17,4 +17,5 @@ type CmdOutputObservation struct {
 	Metadata    CmdOutputMetadata `json:"metadata"`
 	Command     string            `json:"command,omitempty"`
 	Hidden      bool              `json:"hidden,omitempty"`
+	ToolCallID  string            `json:"tool_call_id,omitempty"`
 }

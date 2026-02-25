@@ -2,15 +2,17 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"openhands-go/server/events"
 	"openhands-go/server/llm"
+	"openhands-go/server/models"
 	"openhands-go/server/runtime"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/tmc/langchaingo/llms"
 )
 
 type Agent struct {
@@ -19,86 +21,150 @@ type Agent struct {
 	LLM            *llm.LLMService
 	Runtime        runtime.Runtime
 	EventStream    *events.EventStream
+	SystemPrompt   string
+	Tools          []llms.Tool
 }
 
 func NewAgent(id, conversationID string, llmService *llm.LLMService, rt runtime.Runtime, es *events.EventStream) *Agent {
+	// Define execute_bash tool
+	bashTool := llms.Tool{
+		Type: "function",
+		Function: &llms.FunctionDefinition{
+			Name:        "execute_bash",
+			Description: "Execute a bash command in the environment.",
+			Parameters: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"command": map[string]interface{}{
+						"type":        "string",
+						"description": "The bash command to execute.",
+					},
+					"thought": map[string]interface{}{
+						"type":        "string",
+						"description": "Your reasoning for executing this command.",
+					},
+				},
+				"required": []string{"command"},
+			},
+		},
+	}
+
+	finishTool := llms.Tool{
+		Type: "function",
+		Function: &llms.FunctionDefinition{
+			Name:        "finish",
+			Description: "Finish the task.",
+			Parameters: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"thought": map[string]interface{}{
+						"type":        "string",
+						"description": "Your reasoning for finishing the task.",
+					},
+				},
+			},
+		},
+	}
+
 	return &Agent{
 		ID:             id,
 		ConversationID: conversationID,
 		LLM:            llmService,
 		Runtime:        rt,
 		EventStream:    es,
+		SystemPrompt:   "You are a helpful coding agent using the CodeAct framework. You can execute bash commands to solve tasks. When you are done, call finish.",
+		Tools:          []llms.Tool{bashTool, finishTool},
 	}
 }
 
 func (a *Agent) Step(ctx context.Context) error {
-	// 1. Get History
+	// 1. Get History & Construct Messages
 	history := a.EventStream.GetEvents()
 	messages := a.eventsToMessages(history)
 
 	// 2. LLM Completion
-	responseContent, err := a.LLM.Complete(ctx, messages)
+	// CodeActAgent uses tool calling.
+	resp, err := a.LLM.CompleteWithTools(ctx, messages, a.Tools)
 	if err != nil {
-		return err
+		return fmt.Errorf("LLM completion error: %w", err)
 	}
 
-	// 3. Parse Response (Mock: assume single line command "RUN: <cmd>" or "MSG: <msg>")
-	// In reality, this would parse Action objects from JSON/XML
-	action, content := a.parseResponse(responseContent)
+	// 3. Handle Tool Calls
+	if len(resp.ToolCalls) > 0 {
+		for _, tc := range resp.ToolCalls {
+			switch tc.FunctionCall.Name {
+			case "execute_bash":
+				var args struct {
+					Command string `json:"command"`
+					Thought string `json:"thought"`
+				}
+				if err := json.Unmarshal([]byte(tc.FunctionCall.Arguments), &args); err != nil {
+					log.Printf("Error unmarshalling execute_bash args: %v", err)
+					continue
+				}
 
-	// Add Agent Action to stream
-	a.EventStream.AddEvent(events.Event{
-		ID:      uuid.New().String(),
-		Type:    events.EventTypeAction,
-		Content: map[string]string{"action": action, "args": content},
-		Source:  "agent",
-	})
+				// Create CmdRunAction event
+				action := models.CmdRunAction{
+					Action:     models.ActionTypeCmdRun,
+					Command:    args.Command,
+					Thought:    args.Thought,
+					ToolCallID: tc.ID,
+				}
 
-	// 4. Execute Action
-	if action == "run" {
-		// For One-off command execution (LocalRuntime style):
-		// We Start, Read, and then ideally should ensure resources are closed/waited.
-		// Note: Runtime interface Start implies a new command.
-		// DockerRuntime implementation currently keeps container alive but Execs new command.
+				a.EventStream.AddEvent(events.Event{
+					ID:      uuid.New().String(),
+					Type:    events.EventTypeAction,
+					Content: action,
+					Source:  "agent",
+				})
 
-		err := a.Runtime.Start(ctx, "bash", "-c", content)
-		output := ""
-		if err != nil {
-			output = fmt.Sprintf("Error starting command: %v", err)
-		} else {
-			buf := make([]byte, 1024)
-			n, err := a.Runtime.Read(buf)
-			if err != nil {
-				output = fmt.Sprintf("Error reading output: %v", err)
-			} else {
-				output = string(buf[:n])
+				// Execute
+				output, exitCode, err := a.Runtime.Execute(ctx, "bash", "-c", args.Command)
+				content := output
+				if err != nil {
+					content = fmt.Sprintf("Error executing command: %v", err)
+				}
+
+				// Create Observation event
+				obs := models.CmdOutputObservation{
+					Observation: "run",
+					Content:     content,
+					Metadata: models.CmdOutputMetadata{
+						ExitCode: exitCode,
+					},
+					Command:    args.Command,
+					ToolCallID: tc.ID,
+				}
+				a.EventStream.AddEvent(events.Event{
+					ID:      uuid.New().String(),
+					Type:    events.EventTypeObservation,
+					Content: obs,
+					Source:  "runtime",
+				})
+
+			case "finish":
+				a.EventStream.AddEvent(events.Event{
+					ID:      uuid.New().String(),
+					Type:    events.EventTypeAction,
+					Content: models.AgentFinishAction{
+						Action: models.ActionTypeAgentFinish,
+					},
+					Source: "agent",
+				})
+				// Ideally stop the loop
 			}
-			// Close/Cleanup the runtime execution if applicable (mainly for PTY/Process cleanup)
-			// But Runtime interface doesn't have a "StopCommand" method separate from Close.
-			// Ideally, Runtime should support Execute(cmd) -> (stdout, stderr, err)
-			// For now, assume Runtime handles internal state or is persistent.
-			// DockerRuntime uses Exec, so multiple Start() calls are fine.
-			// LocalRuntime uses PTY, so Start() overwrites the previous command.
-			// Calling Close() here would kill the runtime instance entirely?
-			// No, Close() in LocalRuntime kills the process.
-			// If we want to keep the "Runtime" alive as a session, we shouldn't close it?
-			// But LocalRuntime overwrites r.cmd.
-			// To avoid resource leaks (zombies) in LocalRuntime, we should call Close() or Wait() on the *command*, not the *runtime* if runtime represents environment.
-			// Given current LocalRuntime implementation, Close() kills the process.
-			// Let's call Close() to ensure we don't leave zombie processes, as Agent Step assumes "Run command and get output".
-			a.Runtime.Close()
 		}
-
-		// Add Observation
+	} else if resp.Content != "" {
+		// Just a message
 		a.EventStream.AddEvent(events.Event{
 			ID:      uuid.New().String(),
-			Type:    events.EventTypeObservation,
-			Content: map[string]string{"output": output},
-			Source:  "runtime",
+			Type:    events.EventTypeAction,
+			Content: models.MessageAction{
+				Action:  models.ActionTypeMessage,
+				Content: resp.Content,
+			},
+			Source: "agent",
 		})
-	} else if action == "message" {
-		// Just a thought/message
-		log.Printf("[Agent %s] Message: %s", a.ID, content)
 	}
 
 	return nil
@@ -106,35 +172,105 @@ func (a *Agent) Step(ctx context.Context) error {
 
 func (a *Agent) eventsToMessages(evts []events.Event) []llm.Message {
 	msgs := []llm.Message{
-		{Role: "system", Content: "You are a helpful coding agent. Respond with 'RUN: <command>' to execute code or 'MSG: <message>' to talk."},
+		{Role: "system", Content: a.SystemPrompt},
 	}
+
 	for _, e := range evts {
-		// Simple mapping
-		role := "user"
-		content := fmt.Sprintf("%v", e.Content)
-		if e.Source == "agent" {
-			role = "assistant"
-		} else if e.Source == "runtime" {
-			role = "user" // Observation is user/system info
-			content = fmt.Sprintf("Output: %v", e.Content)
+		switch e.Type {
+		case events.EventTypeAction:
+			// Handle different action types
+			// We need to check the Content type carefully.
+			// It might be map[string]interface{} (from JSON unmarshal) or struct (from AddEvent)
+			// Using fmt.Sprintf("%v") is risky for structured data.
+			// Ideally we should unmarshal it to specific types.
+
+			// For now, let's assume simple cases or marshal back to JSON
+			bytes, _ := json.Marshal(e.Content)
+
+			// Determine role
+			// role := "user"
+			// if e.Source == "agent" {
+			// 	role = "assistant"
+			// }
+
+			// If it's a Tool Call (Agent Action with ToolCallID)
+			// We need to reconstruct the ToolCall object for LLM history
+			if e.Source == "agent" {
+				// Try to parse as CmdRunAction
+				var cmdAction models.CmdRunAction
+				if err := json.Unmarshal(bytes, &cmdAction); err == nil && cmdAction.Action == models.ActionTypeCmdRun {
+					// It's a tool call
+					msgs = append(msgs, llm.Message{
+						Role: "assistant",
+						ToolCalls: []llms.ToolCall{
+							{
+								ID:   cmdAction.ToolCallID,
+								Type: "function",
+								FunctionCall: &llms.FunctionCall{
+									Name:      "execute_bash",
+									Arguments: fmt.Sprintf(`{"command": %q, "thought": %q}`, cmdAction.Command, cmdAction.Thought),
+								},
+							},
+						},
+					})
+					continue
+				}
+				// Finish action
+				var finishAction models.AgentFinishAction
+				if err := json.Unmarshal(bytes, &finishAction); err == nil && finishAction.Action == models.ActionTypeAgentFinish {
+					// Finish tool call
+					// Logic similar to above
+					continue
+				}
+
+				// Message Action
+				var msgAction models.MessageAction
+				if err := json.Unmarshal(bytes, &msgAction); err == nil && msgAction.Action == models.ActionTypeMessage {
+					msgs = append(msgs, llm.Message{
+						Role:    "assistant",
+						Content: msgAction.Content,
+					})
+					continue
+				}
+			} else {
+				// User action
+				// e.g. Initial message or user feedback
+				// If e.Content is a struct, unmarshal/marshal
+				// Assuming simple user message for now if source is user
+				var msgAction models.MessageAction
+				if err := json.Unmarshal(bytes, &msgAction); err == nil {
+					msgs = append(msgs, llm.Message{
+						Role:    "user",
+						Content: msgAction.Content,
+					})
+					continue
+				}
+
+				// Fallback
+				msgs = append(msgs, llm.Message{
+					Role:    "user",
+					Content: string(bytes),
+				})
+			}
+
+		case events.EventTypeObservation:
+			// Tool Output
+			bytes, _ := json.Marshal(e.Content)
+			var obs models.CmdOutputObservation
+			if err := json.Unmarshal(bytes, &obs); err == nil {
+				msgs = append(msgs, llm.Message{
+					Role:       "tool",
+					Content:    obs.Content,
+					ToolCallID: obs.ToolCallID,
+				})
+			}
 		}
-		msgs = append(msgs, llm.Message{Role: role, Content: content})
 	}
 	return msgs
 }
 
-func (a *Agent) parseResponse(resp string) (string, string) {
-	if strings.HasPrefix(resp, "RUN: ") {
-		return "run", strings.TrimPrefix(resp, "RUN: ")
-	}
-	if strings.HasPrefix(resp, "MSG: ") {
-		return "message", strings.TrimPrefix(resp, "MSG: ")
-	}
-	return "message", resp
-}
-
 func (a *Agent) RunLoop(ctx context.Context) {
-	log.Printf("Starting agent loop for conversation %s", a.ConversationID)
+	log.Printf("Starting CodeAct agent loop for conversation %s", a.ConversationID)
 	for {
 		select {
 		case <-ctx.Done():
