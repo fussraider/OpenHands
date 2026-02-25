@@ -9,6 +9,7 @@ const (
 	ActionTypeAgentFinish  ActionType = "finish"
 	ActionTypeMessage      ActionType = "message"
 	ActionTypeThink        ActionType = "think"
+	ActionTypeDelegate     ActionType = "delegate"
 )
 
 // BaseAction contains common fields for all actions.
@@ -50,4 +51,12 @@ type MessageAction struct {
 type ThinkAction struct {
 	Action  ActionType `json:"action"` // "think"
 	Thought string     `json:"thought"`
+}
+
+// AgentDelegateAction represents delegating a task to another agent.
+type AgentDelegateAction struct {
+	Action  ActionType             `json:"action"` // "delegate"
+	Agent   string                 `json:"agent"`
+	Inputs  map[string]interface{} `json:"inputs,omitempty"`
+	Thought string                 `json:"thought,omitempty"`
 }
