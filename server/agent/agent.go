@@ -10,6 +10,7 @@ import (
 	"openhands-go/server/models"
 	"openhands-go/server/runtime"
 	"openhands-go/server/runtime/plugins"
+	"openhands-go/server/runtime/plugins/browser"
 	"openhands-go/server/runtime/plugins/jupyter"
 	"time"
 
@@ -32,6 +33,7 @@ func NewAgent(id, conversationID string, llmService *llm.LLMService, rt runtime.
 	// Initialize Plugins
 	plugs := []plugins.Plugin{
 		jupyter.NewJupyterPlugin(),
+		browser.NewBrowserPlugin(),
 	}
 
 	// Initialize plugins with runtime

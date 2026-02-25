@@ -27,8 +27,8 @@ The following features exist in the Python codebase but are not yet implemented 
 | Area | Feature | Priority | Python Reference | Notes |
 |---|---|---|---|---|
 | **Runtime** | **Stateful Shell Execution** | ✅ Complete | `openhands/runtime/impl/` | `LocalRuntime` now supports persistent bash sessions via `creack/pty`. `DockerRuntime` supports `Execute` interface but currently stateless (one-off exec). |
-| **Runtime** | **Browser Automation** | 🟡 High | `openhands/runtime/browser/` | Integration with Playwright/Selenium for web browsing agents. |
-| **Runtime** | **Plugin System** | 🟡 High | `openhands/runtime/plugins/` | Support for dynamic plugin loading (e.g., linters, formatters). |
+| **Runtime** | **Browser Automation** | ✅ Complete | `openhands/runtime/browser/` | Implemented `BrowserPlugin` using `playwright-go`. |
+| **Runtime** | **Plugin System** | ✅ Complete | `openhands/runtime/plugins/` | Implemented generic `Plugin` interface and integration into `Agent`. |
 | **Agent** | **Complex Agent Logic** | ✅ Complete | `openhands/core/agent/` | Implemented `CodeActAgent` logic with tool calling (`execute_bash`) and multi-turn reasoning using `langchaingo`. |
 | **Agent** | **Delegation** | 🟡 Medium | `openhands/agenthub/` | Support for delegating tasks to sub-agents. |
 | **Events** | **Rich Event Types** | 🟡 Medium | `openhands/events/` | Expand `Event` struct to support specific Action/Observation types (e.g., `CmdRunAction`, `CmdOutputObservation`) with proper validation. |
