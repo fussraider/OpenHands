@@ -7,13 +7,10 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/creack/pty"
 )
 
 const (
@@ -24,15 +21,17 @@ const (
 var ps1Regex = regexp.MustCompile(fmt.Sprintf(`(?s)%s(.*?)%s`, regexp.QuoteMeta(cmdOutputPS1Begin), regexp.QuoteMeta(cmdOutputPS1End)))
 var ansiRegex = regexp.MustCompile(`\x1b\[[0-9;?]*[a-zA-Z]`)
 
-type BashSession struct {
-	cmd     *exec.Cmd
-	pty     *os.File
+type ShellSession struct {
+	rw      io.ReadWriteCloser
 	mu      sync.Mutex
-	workDir string
 	closed  bool
+	initialized bool
 
 	// Buffer to store output
 	outputBuffer bytes.Buffer
+
+	// Current working dir cache
+	workDir string
 }
 
 type CmdMetadata struct {
@@ -44,65 +43,48 @@ type CmdMetadata struct {
 	PyInterpreter string `json:"py_interpreter_path"`
 }
 
-func NewBashSession(workDir string) (*BashSession, error) {
-	return &BashSession{
-		workDir: workDir,
-	}, nil
+func NewShellSession(rw io.ReadWriteCloser) *ShellSession {
+	return &ShellSession{
+		rw: rw,
+	}
 }
 
-func (s *BashSession) Start() error {
+func (s *ShellSession) Initialize(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.start()
-}
 
-func (s *BashSession) start() error {
-	if s.cmd != nil && s.cmd.Process != nil {
-		return nil // Already running
+	if s.initialized {
+		return nil
 	}
-
-	// Ensure workDir exists
-	if s.workDir != "" {
-		if err := os.MkdirAll(s.workDir, 0755); err != nil {
-			return err
-		}
-	}
-
-	s.cmd = exec.Command("bash", "--noprofile", "--norc")
-	if s.workDir != "" {
-		s.cmd.Dir = s.workDir
-	}
-	s.cmd.Env = os.Environ()
-	// Disable prompt expansion for PS1 initially to avoid noise? No.
-
-	f, err := pty.Start(s.cmd)
-	if err != nil {
-		return err
-	}
-	s.pty = f
 
 	// Disable echo to clean up output
-	if _, err := s.pty.Write([]byte("stty -echo\n")); err != nil {
+	if _, err := s.rw.Write([]byte("stty -echo\n")); err != nil {
 		return err
 	}
 
 	// Set prompt
 	ps1Cmd := s.getPS1Command()
-	if _, err := s.pty.Write([]byte(ps1Cmd + "\n")); err != nil {
+	if _, err := s.rw.Write([]byte(ps1Cmd + "\n")); err != nil {
 		return err
 	}
 
 	// Wait for prompt
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// Use a short timeout for initialization
+	initCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	_, _, err = s.readUntilPrompt(ctx)
+	_, _, err := s.readUntilPrompt(initCtx)
+	if err != nil {
+		return err
+	}
+
 	// Clear buffer to ensure clean slate
 	s.outputBuffer.Reset()
-	return err
+	s.initialized = true
+	return nil
 }
 
-func (s *BashSession) getPS1Command() string {
+func (s *ShellSession) getPS1Command() string {
 	// We break the markers to avoid matching the command echo.
 	// markerBegin generates ###PS1JSON###
 	markerBegin := "$(printf \"%s%s\" \"###PS1\" \"JSON###\")"
@@ -116,7 +98,7 @@ func (s *BashSession) getPS1Command() string {
 	return fmt.Sprintf("export PS1='%s%s%s'; export PS2=\"\"", markerBegin, jsonTemplate, markerEnd)
 }
 
-func (s *BashSession) readUntilPrompt(ctx context.Context) (string, int, error) {
+func (s *ShellSession) readUntilPrompt(ctx context.Context) (string, int, error) {
 	buf := make([]byte, 4096)
 	for {
 		select {
@@ -157,36 +139,64 @@ func (s *BashSession) readUntilPrompt(ctx context.Context) (string, int, error) 
 		}
 
 		// Read more
-		s.pty.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
-		n, err := s.pty.Read(buf)
-		if err != nil {
-			if err == io.EOF {
-				return "", -1, fmt.Errorf("shell exited unexpectedly")
-			}
-			if !os.IsTimeout(err) {
-				return "", -1, err
-			}
-			// Timeout -> continue loop
-			continue
+		// Since s.rw might not support SetReadDeadline (generic io.ReadWriteCloser),
+		// we rely on the underlying implementation or use a goroutine for reading if needed.
+		// However, for this implementation, we assume s.rw.Read is blocking but interruptible via Close?
+		// Or we need a way to timeout.
+		// If s.rw is a file (PTY) or net.Conn (Docker), it supports deadlines or we can poll.
+		// Since we abstracted it to io.ReadWriteCloser, we can't cast to SetReadDeadline.
+		// We'll trust the caller to manage the ReadWriteCloser or use a wrapper.
+		// But wait, `readUntilPrompt` needs to be responsive to ctx.Done().
+
+		// If we do a blocking Read on s.rw, we can't respect ctx.Done() unless s.rw supports it.
+		// Ideally we read in a goroutine.
+
+		type readResult struct {
+			n   int
+			err error
 		}
-		if n > 0 {
-			s.outputBuffer.Write(buf[:n])
+		readCh := make(chan readResult, 1)
+		go func() {
+			n, err := s.rw.Read(buf)
+			readCh <- readResult{n, err}
+		}()
+
+		select {
+		case res := <-readCh:
+			if res.err != nil {
+				if res.err == io.EOF {
+					return "", -1, fmt.Errorf("shell exited unexpectedly")
+				}
+				// If it's a timeout error (from underlying implementation), we iterate.
+				if os.IsTimeout(res.err) {
+					continue
+				}
+				return "", -1, res.err
+			}
+			if res.n > 0 {
+				s.outputBuffer.Write(buf[:res.n])
+			}
+		case <-ctx.Done():
+			// We can't cancel the read easily if it's blocked.
+			// This leaks the goroutine if Read blocks forever.
+			// But for PTY/Socket, Read usually returns eventually or we Close session on cancel?
+			return "", -1, ctx.Err()
 		}
 	}
 }
 
-func (s *BashSession) Execute(ctx context.Context, command string) (string, int, error) {
+func (s *ShellSession) Execute(ctx context.Context, command string) (string, int, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.cmd == nil || s.cmd.Process == nil {
-		if err := s.start(); err != nil {
+	if !s.initialized {
+		if err := s.Initialize(ctx); err != nil {
 			return "", -1, err
 		}
 	}
 
 	// Write command
-	if _, err := s.pty.Write([]byte(command + "\n")); err != nil {
+	if _, err := s.rw.Write([]byte(command + "\n")); err != nil {
 		return "", -1, err
 	}
 
@@ -196,28 +206,21 @@ func (s *BashSession) Execute(ctx context.Context, command string) (string, int,
 		return "", -1, err
 	}
 
-	// Clean output: remove the command echo if present (if stty -echo failed or slow)
+	// Clean output
 	output := strings.TrimSpace(rawOutput)
 	trimmedCmd := strings.TrimSpace(command)
 	if strings.HasPrefix(output, trimmedCmd) {
 		output = strings.TrimPrefix(output, trimmedCmd)
 	}
-	// Remove ANSI escape codes (e.g. bracketed paste)
 	output = ansiRegex.ReplaceAllString(output, "")
 	output = strings.TrimSpace(output)
 
 	return output, exitCode, nil
 }
 
-func (s *BashSession) Close() error {
+func (s *ShellSession) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.closed = true
-	if s.pty != nil {
-		s.pty.Close()
-	}
-	if s.cmd != nil && s.cmd.Process != nil {
-		return s.cmd.Process.Kill()
-	}
-	return nil
+	return s.rw.Close()
 }

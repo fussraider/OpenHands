@@ -2,28 +2,41 @@ package runtime
 
 import (
 	"context"
+	"os"
+	"os/exec"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/creack/pty"
 )
 
-func TestBashSession(t *testing.T) {
-	bash, err := NewBashSession(t.TempDir())
+func TestShellSession(t *testing.T) {
+	// Setup PTY manually for test
+	cmd := exec.Command("bash", "--noprofile", "--norc")
+	cmd.Env = os.Environ()
+
+	f, err := pty.Start(cmd)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer bash.Close()
+	// Note: We don't close f here, ShellSession closes it.
+	// But we might need to kill cmd.
+	defer cmd.Process.Kill()
+
+	shell := NewShellSession(f)
+	defer shell.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// 1. Start explicitly
-	if err := bash.Start(); err != nil {
-		t.Fatalf("Start failed: %v", err)
+	// 1. Initialize (replaces Start)
+	if err := shell.Initialize(ctx); err != nil {
+		t.Fatalf("Initialize failed: %v", err)
 	}
 
 	// 2. Execute simple command
-	output, exitCode, err := bash.Execute(ctx, "echo hello")
+	output, exitCode, err := shell.Execute(ctx, "echo hello")
 	if err != nil {
 		t.Fatalf("Execute failed: %v", err)
 	}
@@ -35,12 +48,12 @@ func TestBashSession(t *testing.T) {
 	}
 
 	// 3. State persistence
-	_, _, err = bash.Execute(ctx, "export MY_VAR=123")
+	_, _, err = shell.Execute(ctx, "export MY_VAR=123")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	output, _, err = bash.Execute(ctx, "echo $MY_VAR")
+	output, _, err = shell.Execute(ctx, "echo $MY_VAR")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,19 +63,16 @@ func TestBashSession(t *testing.T) {
 
 	// 4. CWD persistence
 	newDir := t.TempDir()
-	_, _, err = bash.Execute(ctx, "cd "+newDir)
+	_, _, err = shell.Execute(ctx, "cd "+newDir)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	output, _, err = bash.Execute(ctx, "pwd")
+	output, _, err = shell.Execute(ctx, "pwd")
 	if err != nil {
 		t.Fatal(err)
 	}
-	// pwd might return physical path (resolving symlinks if t.TempDir is symlinked)
-	// Just check if output is not empty and matches partially or use realpath
 	if !strings.Contains(output, newDir) && !strings.Contains(newDir, strings.TrimSpace(output)) {
-		// On macos /tmp is /private/tmp.
 		t.Logf("cd output: %s, expected %s", output, newDir)
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"openhands-go/server/config"
+	"strings"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -15,6 +16,7 @@ type DockerRuntime struct {
 	containerID  string
 	config       *config.Config
 	hijackedResp *types.HijackedResponse
+	shell        *ShellSession
 }
 
 func NewDockerRuntime(cfg *config.Config) (*DockerRuntime, error) {
@@ -52,7 +54,63 @@ func (r *DockerRuntime) ensureContainer(ctx context.Context) error {
 	return nil
 }
 
+// dockerConnWrapper wraps hijacked response to implement io.ReadWriteCloser using the BufReader
+type dockerConnWrapper struct {
+	resp *types.HijackedResponse
+}
+
+func (w *dockerConnWrapper) Read(p []byte) (int, error) {
+	return w.resp.Reader.Read(p)
+}
+
+func (w *dockerConnWrapper) Write(p []byte) (int, error) {
+	return w.resp.Conn.Write(p)
+}
+
+func (w *dockerConnWrapper) Close() error {
+	w.resp.Close()
+	return nil
+}
+
+func (r *DockerRuntime) startDockerShell(ctx context.Context) error {
+	if r.shell != nil {
+		return nil
+	}
+
+	if err := r.ensureContainer(ctx); err != nil {
+		return err
+	}
+
+	// Start bash in container
+	execConfig := types.ExecConfig{
+		Cmd:          []string{"bash", "--noprofile", "--norc"},
+		AttachStdout: true,
+		AttachStderr: true,
+		AttachStdin:  true,
+		Tty:          true,
+		Env:          []string{"TERM=xterm"}, // Ensure TTY behaves correctly
+	}
+
+	execIDResp, err := r.client.ContainerExecCreate(ctx, r.containerID, execConfig)
+	if err != nil {
+		return err
+	}
+
+	resp, err := r.client.ContainerExecAttach(ctx, execIDResp.ID, types.ExecStartCheck{
+		Tty: true,
+	})
+	if err != nil {
+		return err
+	}
+
+	r.hijackedResp = &resp
+	r.shell = NewShellSession(&dockerConnWrapper{resp: &resp})
+
+	return nil
+}
+
 func (r *DockerRuntime) Start(ctx context.Context, command string, args ...string) error {
+	// Legacy Start: launch one-off command
 	if err := r.ensureContainer(ctx); err != nil {
 		return err
 	}
@@ -83,43 +141,23 @@ func (r *DockerRuntime) Start(ctx context.Context, command string, args ...strin
 }
 
 func (r *DockerRuntime) Execute(ctx context.Context, command string, args ...string) (string, int, error) {
-	if err := r.ensureContainer(ctx); err != nil {
-		return "", -1, err
+	// Ensure persistent shell
+	if r.shell == nil {
+		if err := r.startDockerShell(ctx); err != nil {
+			return "", -1, err
+		}
 	}
 
-	fullCmd := append([]string{command}, args...)
-	execConfig := types.ExecConfig{
-		Cmd:          fullCmd,
-		AttachStdout: true,
-		AttachStderr: true,
-		AttachStdin:  false,
-		Tty:          true,
+	// Check if command is bash -c which is common from ActionService
+	cmdStr := command
+	if command == "bash" && len(args) >= 2 && args[0] == "-c" {
+		cmdStr = args[1]
+	} else if len(args) > 0 {
+		// Attempt to reconstruct command string
+		cmdStr = command + " " + strings.Join(args, " ")
 	}
 
-	execIDResp, err := r.client.ContainerExecCreate(ctx, r.containerID, execConfig)
-	if err != nil {
-		return "", -1, err
-	}
-
-	resp, err := r.client.ContainerExecAttach(ctx, execIDResp.ID, types.ExecStartCheck{
-		Tty: true,
-	})
-	if err != nil {
-		return "", -1, err
-	}
-	defer resp.Close()
-
-	output, err := io.ReadAll(resp.Reader)
-	if err != nil {
-		return "", -1, err
-	}
-
-	inspectResp, err := r.client.ContainerExecInspect(ctx, execIDResp.ID)
-	if err != nil {
-		return string(output), 0, nil
-	}
-
-	return string(output), inspectResp.ExitCode, nil
+	return r.shell.Execute(ctx, cmdStr)
 }
 
 func (r *DockerRuntime) Write(p []byte) (n int, err error) {
@@ -137,8 +175,13 @@ func (r *DockerRuntime) Read(p []byte) (n int, err error) {
 }
 
 func (r *DockerRuntime) Close() error {
-	if r.hijackedResp != nil {
+	var firstErr error
+	if r.shell != nil {
+		if err := r.shell.Close(); err != nil {
+			firstErr = err
+		}
+	} else if r.hijackedResp != nil {
 		r.hijackedResp.Close()
 	}
-	return nil
+	return firstErr
 }
