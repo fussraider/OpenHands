@@ -26,7 +26,7 @@ The following features exist in the Python codebase but are not yet implemented 
 
 | Area | Feature | Priority | Python Reference | Notes |
 |---|---|---|---|---|
-| **Runtime** | **Stateful Shell Execution** | 🔴 Critical | `openhands/runtime/impl/` | Current Go runtime is stateless (one-off commands). Must support persistent shell sessions (e.g., via `creack/pty` with `setsid` or persistent Docker exec). |
+| **Runtime** | **Stateful Shell Execution** | ✅ Complete | `openhands/runtime/impl/` | `LocalRuntime` now supports persistent bash sessions via `creack/pty`. `DockerRuntime` supports `Execute` interface but currently stateless (one-off exec). |
 | **Runtime** | **Browser Automation** | 🟡 High | `openhands/runtime/browser/` | Integration with Playwright/Selenium for web browsing agents. |
 | **Runtime** | **Plugin System** | 🟡 High | `openhands/runtime/plugins/` | Support for dynamic plugin loading (e.g., linters, formatters). |
 | **Agent** | **Complex Agent Logic** | 🔴 Critical | `openhands/core/agent/` | Implement full `CodeActAgent` logic, including multi-turn reasoning and tool use parsing. |

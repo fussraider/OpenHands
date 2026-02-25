@@ -21,9 +21,8 @@ It is functionally capable of running simple tasks but lacks the full feature se
     - Settings (`settings.json`)
     - Secrets (In-memory for now)
 - **Runtime Management**:
-    - **LocalRuntime**: Executes commands locally using `os/exec`.
+    - **LocalRuntime**: Executes commands locally using persistent bash session (via `creack/pty`). Supports stateful execution (cwd, env vars).
     - **DockerRuntime**: Executes commands inside a Docker container using the Docker API.
-    - *Limitation*: Command execution is currently **stateless** (one-off). Environment variables and directory changes (`cd`) do not persist between commands.
 - **Agent Logic**:
     - Basic "Loop" that fetches events and queries an LLM.
     - Integration with `tmc/langchaingo` for LLM support.
