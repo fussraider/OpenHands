@@ -9,6 +9,7 @@ import (
 	"openhands-go/server/config"
 	"openhands-go/server/events"
 	"openhands-go/server/llm"
+	"openhands-go/server/memory"
 	"openhands-go/server/models"
 	"openhands-go/server/runtime"
 	"openhands-go/server/runtime/plugins"
@@ -18,6 +19,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/tmc/langchaingo/llms"
+	"go.opentelemetry.io/otel"
 )
 
 type Agent struct {
@@ -33,6 +35,7 @@ type Agent struct {
 	PromptManager  *prompts.PromptManager
 	Config         *config.Config
 	LoopDetector   *LoopDetector
+	Condenser      memory.Condenser
 }
 
 func NewAgent(id, conversationID string, llmService *llm.LLMService, rt runtime.Runtime, es *events.EventStream, delegator Delegator, cfg *config.Config) *Agent {
@@ -59,6 +62,13 @@ func NewAgent(id, conversationID string, llmService *llm.LLMService, rt runtime.
 		PromptManager:  pm,
 		Config:         cfg,
 		LoopDetector:   NewLoopDetector(),
+	}
+
+	// Initialize Condenser
+	if cfg.Agent.EnableHistoryTruncation {
+		agent.Condenser = memory.NewTokenCondenser(cfg.Agent.MaxEvents)
+	} else {
+		agent.Condenser = &memory.NoOpCondenser{}
 	}
 
 	// Render System Prompt
@@ -161,8 +171,21 @@ func NewAgent(id, conversationID string, llmService *llm.LLMService, rt runtime.
 }
 
 func (a *Agent) Step(ctx context.Context) error {
+	// Start Span
+	ctx, span := otel.Tracer("agent").Start(ctx, "Agent.Step")
+	defer span.End()
+
 	// 1. Get History & Construct Messages
 	history := a.EventStream.GetEvents()
+
+	// Condense History
+	if a.Condenser != nil {
+		var err error
+		history, err = a.Condenser.Condense(ctx, history)
+		if err != nil {
+			slog.Error("Failed to condense history", "error", err)
+		}
+	}
 
 	// 2. Loop Detection
 	if stuck, analysis := a.LoopDetector.IsStuck(history); stuck {
@@ -183,7 +206,9 @@ func (a *Agent) Step(ctx context.Context) error {
 	messages := a.eventsToMessages(ctx, history)
 
 	// 3. LLM Completion
-	resp, err := a.LLM.CompleteWithTools(ctx, messages, a.Tools)
+	llmSpanCtx, llmSpan := otel.Tracer("agent").Start(ctx, "LLM.Complete")
+	resp, err := a.LLM.CompleteWithTools(llmSpanCtx, messages, a.Tools)
+	llmSpan.End()
 	if err != nil {
 		return fmt.Errorf("LLM completion error: %w", err)
 	}

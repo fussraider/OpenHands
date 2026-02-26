@@ -31,7 +31,9 @@ type LLMConfig struct {
 }
 
 type AgentConfig struct {
-	Name string `toml:"name"`
+	Name             string `toml:"name"`
+	EnableHistoryTruncation bool `toml:"enable_history_truncation"`
+	MaxEvents        int    `toml:"max_events"` // Simple condenser threshold
 }
 
 type SandboxConfig struct {

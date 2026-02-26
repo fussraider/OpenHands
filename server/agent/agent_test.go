@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"openhands-go/server/config"
 	"openhands-go/server/events"
 	"openhands-go/server/llm"
 	"openhands-go/server/models"
@@ -67,7 +68,12 @@ func TestEventsToMessages(t *testing.T) {
 
 	// Create Agent
 	// We pass nil LLM service as we just test eventsToMessages
-	agent := NewAgent("test-agent", "test-conv", &llm.LLMService{}, &MockRuntime{}, es, nil, nil)
+	cfg := &config.Config{
+		Agent: config.AgentConfig{
+			Name: "test-agent",
+		},
+	}
+	agent := NewAgent("test-agent", "test-conv", &llm.LLMService{}, &MockRuntime{}, es, nil, cfg)
 
 	msgs := agent.eventsToMessages(context.Background(), es.GetEvents())
 
@@ -170,7 +176,12 @@ func (p *MockPlugin) HandleToolCall(ctx context.Context, name string, args strin
 }
 
 func TestAgentPlugins(t *testing.T) {
-	agent := NewAgent("test", "conv", &llm.LLMService{}, &MockRuntime{}, events.NewEventStream("conv", ""), nil, nil)
+	cfg := &config.Config{
+		Agent: config.AgentConfig{
+			Name: "test-agent",
+		},
+	}
+	agent := NewAgent("test", "conv", &llm.LLMService{}, &MockRuntime{}, events.NewEventStream("conv", ""), nil, cfg)
 
 	// Add mock plugin manually
 	agent.Plugins = append(agent.Plugins, &MockPlugin{})
