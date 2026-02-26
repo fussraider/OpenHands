@@ -55,8 +55,9 @@ type ThinkAction struct {
 
 // AgentDelegateAction represents delegating a task to another agent.
 type AgentDelegateAction struct {
-	Action  ActionType             `json:"action"` // "delegate"
-	Agent   string                 `json:"agent"`
-	Inputs  map[string]interface{} `json:"inputs,omitempty"`
-	Thought string                 `json:"thought,omitempty"`
+	Action     ActionType             `json:"action"` // "delegate"
+	Agent      string                 `json:"agent"`
+	Inputs     map[string]interface{} `json:"inputs,omitempty"`
+	Thought    string                 `json:"thought,omitempty"`
+	ToolCallID string                 `json:"tool_call_id,omitempty"`
 }

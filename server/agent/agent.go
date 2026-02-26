@@ -27,22 +27,15 @@ type Agent struct {
 	SystemPrompt   string
 	Tools          []llms.Tool
 	Plugins        []plugins.Plugin
+	Delegator      Delegator
 }
 
-func NewAgent(id, conversationID string, llmService *llm.LLMService, rt runtime.Runtime, es *events.EventStream) *Agent {
+func NewAgent(id, conversationID string, llmService *llm.LLMService, rt runtime.Runtime, es *events.EventStream, delegator Delegator) *Agent {
 	// Initialize Plugins
 	plugs := []plugins.Plugin{
 		jupyter.NewJupyterPlugin(),
 		browser.NewBrowserPlugin(),
 	}
-
-	// Initialize plugins with runtime
-	// We use a background context for init, or pass context?
-	// NewAgent doesn't take context. We'll init lazily or just ignore context for now?
-	// `Init` takes context. We should probably init in `RunLoop` or `Step` if not initialized?
-	// Or change NewAgent signature.
-	// For now, let's do best effort init here or in RunLoop.
-	// Better in RunLoop or separate method.
 
 	agent := &Agent{
 		ID:             id,
@@ -52,6 +45,7 @@ func NewAgent(id, conversationID string, llmService *llm.LLMService, rt runtime.
 		EventStream:    es,
 		SystemPrompt:   "You are a helpful coding agent using the CodeAct framework. You can execute bash commands to solve tasks. When you are done, call finish.",
 		Plugins:        plugs,
+		Delegator:      delegator,
 	}
 
 	// Collect tools
@@ -95,7 +89,39 @@ func NewAgent(id, conversationID string, llmService *llm.LLMService, rt runtime.
 			},
 		},
 	}
-	tools = append(tools, bashTool, finishTool)
+
+	// Delegate tool (if delegator is present)
+	var delegateTool llms.Tool
+	if delegator != nil {
+		delegateTool = llms.Tool{
+			Type: "function",
+			Function: &llms.FunctionDefinition{
+				Name:        "delegate",
+				Description: "Delegate a subtask to another agent.",
+				Parameters: map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"agent": map[string]interface{}{
+							"type":        "string",
+							"description": "The name/role of the agent to delegate to (e.g., 'researcher', 'coder').",
+						},
+						"inputs": map[string]interface{}{
+							"type":        "object",
+							"description": "Input parameters for the delegated task.",
+						},
+						"thought": map[string]interface{}{
+							"type":        "string",
+							"description": "Your reasoning for delegating this task.",
+						},
+					},
+					"required": []string{"agent", "inputs"},
+				},
+			},
+		}
+		tools = append(tools, bashTool, finishTool, delegateTool)
+	} else {
+		tools = append(tools, bashTool, finishTool)
+	}
 
 	// Plugin tools
 	for _, p := range plugs {
@@ -132,7 +158,6 @@ func (a *Agent) Step(ctx context.Context) error {
 				}
 				if err := json.Unmarshal([]byte(tc.FunctionCall.Arguments), &args); err != nil {
 					log.Printf("Error unmarshalling execute_bash args: %v", err)
-					// Record error output?
 					a.recordObservation(tc.ID, fmt.Sprintf("Error unmarshalling args: %v", err), "run")
 					continue
 				}
@@ -162,6 +187,41 @@ func (a *Agent) Step(ctx context.Context) error {
 					},
 					Source: "agent",
 				})
+
+			case "delegate":
+				handled = true
+				var args struct {
+					Agent   string                 `json:"agent"`
+					Inputs  map[string]interface{} `json:"inputs"`
+					Thought string                 `json:"thought"`
+				}
+				if err := json.Unmarshal([]byte(tc.FunctionCall.Arguments), &args); err != nil {
+					a.recordObservation(tc.ID, fmt.Sprintf("Error unmarshalling delegate args: %v", err), "delegate")
+					continue
+				}
+
+				a.recordAction(models.AgentDelegateAction{
+					Action:     models.ActionTypeDelegate,
+					Agent:      args.Agent,
+					Inputs:     args.Inputs,
+					Thought:    args.Thought,
+					ToolCallID: tc.ID,
+				})
+
+				if a.Delegator != nil {
+					outputs, err := a.Delegator.Delegate(ctx, args.Agent, args.Inputs)
+					content := ""
+					if err != nil {
+						content = fmt.Sprintf("Delegation error: %v", err)
+					} else {
+						outBytes, _ := json.Marshal(outputs)
+						content = string(outBytes)
+					}
+					// Use generic observation for delegation result
+					a.recordObservation(tc.ID, content, "delegate")
+				} else {
+					a.recordObservation(tc.ID, "Delegation not supported", "delegate")
+				}
 			}
 
 			// Plugin tools
@@ -173,20 +233,13 @@ func (a *Agent) Step(ctx context.Context) error {
 						if err != nil {
 							output = fmt.Sprintf("Plugin error: %v", err)
 						}
-						// Record observation
-						// We need a generic observation type or reuse CmdOutputObservation?
-						// CmdOutputObservation is tailored for bash.
-						// Let's use it for now or make it generic.
-						// For IPython, it's similar (code execution).
 						a.recordObservation(tc.ID, output, "run_ipython")
-						// Note: metadata exit code 0 for success
 						break
 					}
 				}
 			}
 
 			if !handled {
-				// Unknown tool
 				a.recordObservation(tc.ID, fmt.Sprintf("Unknown tool: %s", tc.FunctionCall.Name), "error")
 			}
 		}
@@ -271,6 +324,26 @@ func (a *Agent) eventsToMessages(evts []events.Event) []llm.Message {
 					})
 					continue
 				}
+				// Delegate Action
+				var delegateAction models.AgentDelegateAction
+				if err := json.Unmarshal(bytes, &delegateAction); err == nil && delegateAction.Action == models.ActionTypeDelegate {
+					inputsBytes, _ := json.Marshal(delegateAction.Inputs)
+					msgs = append(msgs, llm.Message{
+						Role: "assistant",
+						ToolCalls: []llms.ToolCall{
+							{
+								ID:   delegateAction.ToolCallID,
+								Type: "function",
+								FunctionCall: &llms.FunctionCall{
+									Name:      "delegate",
+									Arguments: fmt.Sprintf(`{"agent": %q, "inputs": %s, "thought": %q}`, delegateAction.Agent, string(inputsBytes), delegateAction.Thought),
+								},
+							},
+						},
+					})
+					continue
+				}
+
 				// Message Action
 				var msgAction models.MessageAction
 				if err := json.Unmarshal(bytes, &msgAction); err == nil && msgAction.Action == models.ActionTypeMessage {

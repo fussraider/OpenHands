@@ -26,7 +26,7 @@ func (m *MockRuntime) Close() error { return nil }
 
 func TestEventsToMessages(t *testing.T) {
 	// Setup
-	es := events.NewEventStream("test-conv")
+	es := events.NewEventStream("test-conv", "")
 
 	// User message
 	msg := models.MessageAction{Action: "message", Content: "Hello"}
@@ -66,7 +66,7 @@ func TestEventsToMessages(t *testing.T) {
 
 	// Create Agent
 	// We pass nil LLM service as we just test eventsToMessages
-	agent := NewAgent("test-agent", "test-conv", &llm.LLMService{}, &MockRuntime{}, es)
+	agent := NewAgent("test-agent", "test-conv", &llm.LLMService{}, &MockRuntime{}, es, nil)
 
 	msgs := agent.eventsToMessages(es.GetEvents())
 
@@ -150,7 +150,7 @@ func (p *MockPlugin) HandleToolCall(ctx context.Context, name string, args strin
 }
 
 func TestAgentPlugins(t *testing.T) {
-	agent := NewAgent("test", "conv", &llm.LLMService{}, &MockRuntime{}, events.NewEventStream("conv"))
+	agent := NewAgent("test", "conv", &llm.LLMService{}, &MockRuntime{}, events.NewEventStream("conv", ""), nil)
 
 	// Add mock plugin manually
 	agent.Plugins = append(agent.Plugins, &MockPlugin{})

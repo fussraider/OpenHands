@@ -30,7 +30,7 @@ The following features exist in the Python codebase but are not yet implemented 
 | **Runtime** | **Browser Automation** | ✅ Complete | `openhands/runtime/browser/` | Implemented `BrowserPlugin` using `playwright-go`. |
 | **Runtime** | **Plugin System** | ✅ Complete | `openhands/runtime/plugins/` | Implemented generic `Plugin` interface and integration into `Agent`. |
 | **Agent** | **Complex Agent Logic** | ✅ Complete | `openhands/core/agent/` | Implemented `CodeActAgent` logic with tool calling (`execute_bash`) and multi-turn reasoning using `langchaingo`. |
-| **Agent** | **Delegation** | 🟡 Medium | `openhands/agenthub/` | Support for delegating tasks to sub-agents. |
+| **Agent** | **Delegation** | ✅ Complete | `openhands/agenthub/` | Implemented `Delegator` interface and `delegate` tool support. `RuntimeManager` implements stub. |
 | **Events** | **Rich Event Types** | 🟡 Medium | `openhands/events/` | Expand `Event` struct to support specific Action/Observation types (e.g., `CmdRunAction`, `CmdOutputObservation`) with proper validation. |
 | **API** | **Real GitHub Auth** | ✅ Complete | `openhands/server/routes/git.py` | Implemented actual OAuth token usage via `GithubService`. |
 | **Security** | **Sandboxing** | 🔴 Critical | `openhands/runtime/` | Ensure robust isolation for `LocalRuntime` (e.g., using Firejail or similar if running outside Docker). |
