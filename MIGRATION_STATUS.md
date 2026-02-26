@@ -18,22 +18,31 @@ This file tracks the migration status of OpenHands backend features from Python 
 | Public API | `openhands/server/routes/public.py` | `server/handlers/options.go` | ✅ Complete | Implemented as Options API. |
 | Security API | `openhands/server/routes/security.py` | `server/handlers/security.go` | ✅ Complete | Stub implementation. |
 | Socket.IO Events | `openhands/server/routes/socket.py` | `server/ws/socket.go` | ✅ Complete | Supports `oh_user_action` and broadcasts `oh_event`. |
+| Stateful Shell | `openhands/runtime/impl/` | `server/runtime/shell.go` | ✅ Complete | Uses `creack/pty` for local and hijacked Docker streams for container execution. |
+| Browser Plugin | `openhands/runtime/browser/` | `server/runtime/plugins/browser` | ✅ Complete | Using `playwright-go`. |
+| Agent Logic | `openhands/core/agent/` | `server/agent/agent.go` | ✅ Complete | `CodeActAgent` implementation with multi-turn loop and tool calling. |
+| Plugin System | `openhands/runtime/plugins/` | `server/runtime/plugins/` | ✅ Complete | Generic `Plugin` interface and integration. |
+| Persistence | `openhands/storage/` | `server/events/event_stream.go` | ✅ Complete | JSONL file-based persistence for events/feedback. |
 
-## Future Improvements & Missing Features
+## Remaining Python Features to Port
 
-The following features exist in the Python codebase but are not yet implemented or are incomplete in the Go backend.
-**Important:** Do not implement features from `enterprise/` directory as they are under a restrictive license.
+The following features exist in the Python codebase but are **pending migration** to Go. These represent the gap between "Beta/Feature Complete" and "Full Parity".
 
-| Area | Feature | Priority | Python Reference | Notes |
+| Area | Feature | Python Reference | Complexity | Notes |
 |---|---|---|---|---|
-| **Runtime** | **Stateful Shell Execution** | ✅ Complete | `openhands/runtime/impl/` | `LocalRuntime` now supports persistent bash sessions via `creack/pty`. `DockerRuntime` supports `Execute` interface but currently stateless (one-off exec). |
-| **Runtime** | **Browser Automation** | ✅ Complete | `openhands/runtime/browser/` | Implemented `BrowserPlugin` using `playwright-go`. |
-| **Runtime** | **Plugin System** | ✅ Complete | `openhands/runtime/plugins/` | Implemented generic `Plugin` interface and integration into `Agent`. |
-| **Agent** | **Complex Agent Logic** | ✅ Complete | `openhands/core/agent/` | Implemented `CodeActAgent` logic with tool calling (`execute_bash`) and multi-turn reasoning using `langchaingo`. |
-| **Agent** | **Delegation** | ✅ Complete | `openhands/agenthub/` | Implemented `Delegator` interface and `delegate` tool support. `RuntimeManager` implements stub. |
-| **Events** | **Rich Event Types** | ✅ Complete | `openhands/events/` | Implemented custom `UnmarshalJSON` for polymorphic `Event` content and strongly typed Actions/Observations. |
-| **API** | **Real GitHub Auth** | ✅ Complete | `openhands/server/routes/git.py` | Implemented actual OAuth token usage via `GithubService`. |
-| **Security** | **Sandboxing** | ✅ Complete | `openhands/runtime/` | `DockerRuntime` provides container isolation. `LocalRuntime` is explicitly for local development/trusted environments. |
-| **Observability** | **Structured Logging** | ✅ Complete | `openhands/core/logger.py` | Replaced standard `log` with `log/slog` in main server and agent. |
-| **Enterprise** | **Multi-tenancy** | ⛔ Out of Scope | `enterprise/server/` | **DO NOT IMPLEMENT**. Enterprise feature. |
-| **Enterprise** | **SSO/SAML** | ⛔ Out of Scope | `enterprise/integrations/` | **DO NOT IMPLEMENT**. Enterprise feature. |
+| **Skills** | **Prompt Loading** | `openhands/skills/`, `openhands/agenthub/codeact_agent/prompts/` | Low | Need to load Jinja2 templates and Markdown skill definitions dynamically instead of hardcoding system prompts. |
+| **MCP** | **Full Client Impl** | `openhands/mcp/` | High | Full implementation of Model Context Protocol client to interact with MCP servers. |
+| **Agents** | **Other Agents** | `openhands/agenthub/` | Medium | Porting `BrowsingAgent`, `VisualBrowsingAgent`, `LocAgent`. |
+| **Security** | **Analyzer** | `openhands/security/analyzer.py` | High | Prompt injection detection and safety checks. |
+| **Memory** | **Condenser** | `openhands/memory/condenser/` | Medium | Logic to summarize/truncate long conversation history for LLM context window management. |
+| **Observability** | **Tracing** | `openhands/core/logger.py` | Medium | Full OpenTelemetry tracing integration (currently stubs). |
+| **Runtime** | **Jupyter Kernel** | `openhands/runtime/plugins/jupyter/` | High | Python implementation uses real Jupyter kernels via `jupyter_client`. Go implementation currently uses `python3 -c` MVP. |
+| **Events** | **Task Tracking** | `openhands/events/observation/task_tracking.py` | Low | Specific event types for task progress tracking. |
+| **Events** | **Loop Recovery** | `openhands/events/observation/loop_recovery.py` | Medium | Logic to detect and recover from stuck agent loops. |
+
+## Do Not Implement
+
+| Area | Feature | Python Reference | Reason |
+|---|---|---|---|
+| **Enterprise** | **Multi-tenancy** | `enterprise/server/` | Proprietary Enterprise feature. |
+| **Enterprise** | **SSO/SAML** | `enterprise/integrations/` | Proprietary Enterprise feature. |
