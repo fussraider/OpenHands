@@ -22,9 +22,9 @@ var ps1Regex = regexp.MustCompile(fmt.Sprintf(`(?s)%s(.*?)%s`, regexp.QuoteMeta(
 var ansiRegex = regexp.MustCompile(`\x1b\[[0-9;?]*[a-zA-Z]`)
 
 type ShellSession struct {
-	rw      io.ReadWriteCloser
-	mu      sync.Mutex
-	closed  bool
+	rw          io.ReadWriteCloser
+	mu          sync.Mutex
+	closed      bool
 	initialized bool
 
 	// Buffer to store output
@@ -35,11 +35,11 @@ type ShellSession struct {
 }
 
 type CmdMetadata struct {
-	ExitCode int    `json:"exit_code,string"`
-	PID      int    `json:"pid,string"`
-	Username string `json:"username"`
-	Hostname string `json:"hostname"`
-	WorkingDir string `json:"working_dir"`
+	ExitCode      int    `json:"exit_code,string"`
+	PID           int    `json:"pid,string"`
+	Username      string `json:"username"`
+	Hostname      string `json:"hostname"`
+	WorkingDir    string `json:"working_dir"`
 	PyInterpreter string `json:"py_interpreter_path"`
 }
 

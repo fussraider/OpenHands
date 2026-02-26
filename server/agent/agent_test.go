@@ -21,8 +21,8 @@ func (m *MockRuntime) Execute(ctx context.Context, command string, args ...strin
 	return "mock output", 0, nil
 }
 func (m *MockRuntime) Write(p []byte) (n int, err error) { return len(p), nil }
-func (m *MockRuntime) Read(p []byte) (n int, err error) { return 0, nil }
-func (m *MockRuntime) Close() error { return nil }
+func (m *MockRuntime) Read(p []byte) (n int, err error)  { return 0, nil }
+func (m *MockRuntime) Close() error                      { return nil }
 
 func TestEventsToMessages(t *testing.T) {
 	// Setup
@@ -31,37 +31,37 @@ func TestEventsToMessages(t *testing.T) {
 	// User message
 	msg := models.MessageAction{Action: "message", Content: "Hello"}
 	es.AddEvent(events.Event{
-		ID: uuid.New().String(),
-		Type: events.EventTypeAction,
+		ID:      uuid.New().String(),
+		Type:    events.EventTypeAction,
 		Content: msg,
-		Source: "user",
+		Source:  "user",
 	})
 
 	// Agent Tool Call
 	cmd := models.CmdRunAction{
-		Action: "run",
-		Command: "ls",
-		Thought: "listing files",
+		Action:     "run",
+		Command:    "ls",
+		Thought:    "listing files",
 		ToolCallID: "call_123",
 	}
 	es.AddEvent(events.Event{
-		ID: uuid.New().String(),
-		Type: events.EventTypeAction,
+		ID:      uuid.New().String(),
+		Type:    events.EventTypeAction,
 		Content: cmd,
-		Source: "agent",
+		Source:  "agent",
 	})
 
 	// Tool Output
 	obs := models.CmdOutputObservation{
 		Observation: "run",
-		Content: "file1 file2",
-		ToolCallID: "call_123",
+		Content:     "file1 file2",
+		ToolCallID:  "call_123",
 	}
 	es.AddEvent(events.Event{
-		ID: uuid.New().String(),
-		Type: events.EventTypeObservation,
+		ID:      uuid.New().String(),
+		Type:    events.EventTypeObservation,
 		Content: obs,
-		Source: "runtime",
+		Source:  "runtime",
 	})
 
 	// Create Agent
@@ -106,9 +106,9 @@ func TestEventsToMessages(t *testing.T) {
 // TestActionMarshalling verifies that our Action structs marshal/unmarshal correctly via Event
 func TestActionMarshalling(t *testing.T) {
 	cmd := models.CmdRunAction{
-		Action: "run",
-		Command: "echo test",
-		Thought: "testing",
+		Action:     "run",
+		Command:    "echo test",
+		Thought:    "testing",
 		ToolCallID: "123",
 	}
 
@@ -134,11 +134,12 @@ func TestActionMarshalling(t *testing.T) {
 
 // MockPlugin implements plugins.Plugin
 type MockPlugin struct{}
-func (p *MockPlugin) Name() string { return "mock" }
+
+func (p *MockPlugin) Name() string                                       { return "mock" }
 func (p *MockPlugin) Init(ctx context.Context, rt runtime.Runtime) error { return nil }
 func (p *MockPlugin) Tools() []llms.Tool {
 	return []llms.Tool{{
-		Type: "function",
+		Type:     "function",
 		Function: &llms.FunctionDefinition{Name: "mock_tool"},
 	}}
 }

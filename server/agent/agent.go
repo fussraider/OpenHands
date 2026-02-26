@@ -180,8 +180,8 @@ func (a *Agent) Step(ctx context.Context) error {
 			case "finish":
 				handled = true
 				a.EventStream.AddEvent(events.Event{
-					ID:      uuid.New().String(),
-					Type:    events.EventTypeAction,
+					ID:   uuid.New().String(),
+					Type: events.EventTypeAction,
 					Content: models.AgentFinishAction{
 						Action: models.ActionTypeAgentFinish,
 					},
@@ -245,8 +245,8 @@ func (a *Agent) Step(ctx context.Context) error {
 		}
 	} else if resp.Content != "" {
 		a.EventStream.AddEvent(events.Event{
-			ID:      uuid.New().String(),
-			Type:    events.EventTypeAction,
+			ID:   uuid.New().String(),
+			Type: events.EventTypeAction,
 			Content: models.MessageAction{
 				Action:  models.ActionTypeMessage,
 				Content: resp.Content,

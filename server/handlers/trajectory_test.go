@@ -19,9 +19,9 @@ func TestGetTrajectoryHandler(t *testing.T) {
 	convID := "traj-test-conv"
 	es := ActionService.GetEventStream(convID)
 	es.AddEvent(events.Event{
-		ID: uuid.New().String(),
-		Type: events.EventTypeAction,
-		Content: "test",
+		ID:        uuid.New().String(),
+		Type:      events.EventTypeAction,
+		Content:   "test",
 		Timestamp: time.Now(),
 	})
 

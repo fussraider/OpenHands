@@ -24,9 +24,9 @@ type ConversationInfo struct {
 }
 
 type InitSessionRequest struct {
-	Repository              string `json:"repository,omitempty"`
-	SelectedBranch          string `json:"selected_branch,omitempty"`
-	InitialUserMsg          string `json:"initial_user_msg,omitempty"`
+	Repository               string `json:"repository,omitempty"`
+	SelectedBranch           string `json:"selected_branch,omitempty"`
+	InitialUserMsg           string `json:"initial_user_msg,omitempty"`
 	ConversationInstructions string `json:"conversation_instructions,omitempty"`
 }
 

@@ -12,10 +12,10 @@ import (
 )
 
 type BrowserPlugin struct {
-	mu         sync.Mutex
-	pw         *playwright.Playwright
-	browser    playwright.Browser
-	page       playwright.Page
+	mu            sync.Mutex
+	pw            *playwright.Playwright
+	browser       playwright.Browser
+	page          playwright.Page
 	isInitialized bool
 }
 

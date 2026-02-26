@@ -4,12 +4,12 @@ package models
 type ActionType string
 
 const (
-	ActionTypeCmdRun       ActionType = "run"
-	ActionTypeIPythonRun   ActionType = "run_ipython"
-	ActionTypeAgentFinish  ActionType = "finish"
-	ActionTypeMessage      ActionType = "message"
-	ActionTypeThink        ActionType = "think"
-	ActionTypeDelegate     ActionType = "delegate"
+	ActionTypeCmdRun      ActionType = "run"
+	ActionTypeIPythonRun  ActionType = "run_ipython"
+	ActionTypeAgentFinish ActionType = "finish"
+	ActionTypeMessage     ActionType = "message"
+	ActionTypeThink       ActionType = "think"
+	ActionTypeDelegate    ActionType = "delegate"
 )
 
 // BaseAction contains common fields for all actions.
@@ -28,14 +28,14 @@ type CmdRunAction struct {
 
 // IPythonRunCellAction represents an IPython code execution request.
 type IPythonRunCellAction struct {
-	Action ActionType `json:"action"` // "run_ipython"
-	Code   string     `json:"code"`
-	Thought string    `json:"thought,omitempty"`
+	Action  ActionType `json:"action"` // "run_ipython"
+	Code    string     `json:"code"`
+	Thought string     `json:"thought,omitempty"`
 }
 
 // AgentFinishAction represents the agent completing its task.
 type AgentFinishAction struct {
-	Action  ActionType `json:"action"` // "finish"
+	Action  ActionType        `json:"action"` // "finish"
 	Outputs map[string]string `json:"outputs,omitempty"`
 	Thought string            `json:"thought,omitempty"`
 }

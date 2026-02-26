@@ -27,7 +27,7 @@ func TestEventStreamPersistence(t *testing.T) {
 
 	// 3. Add Typed Event
 	cmdAction := models.CmdRunAction{
-		Action: models.ActionTypeCmdRun,
+		Action:  models.ActionTypeCmdRun,
 		Command: "ls",
 	}
 	evt2 := Event{ID: uuid.New().String(), Type: EventTypeAction, Content: cmdAction, Timestamp: time.Now()}
