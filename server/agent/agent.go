@@ -32,6 +32,7 @@ type Agent struct {
 	Delegator      Delegator
 	PromptManager  *prompts.PromptManager
 	Config         *config.Config
+	LoopDetector   *LoopDetector
 }
 
 func NewAgent(id, conversationID string, llmService *llm.LLMService, rt runtime.Runtime, es *events.EventStream, delegator Delegator, cfg *config.Config) *Agent {
@@ -57,6 +58,7 @@ func NewAgent(id, conversationID string, llmService *llm.LLMService, rt runtime.
 		Delegator:      delegator,
 		PromptManager:  pm,
 		Config:         cfg,
+		LoopDetector:   NewLoopDetector(),
 	}
 
 	// Render System Prompt
@@ -161,9 +163,26 @@ func NewAgent(id, conversationID string, llmService *llm.LLMService, rt runtime.
 func (a *Agent) Step(ctx context.Context) error {
 	// 1. Get History & Construct Messages
 	history := a.EventStream.GetEvents()
+
+	// 2. Loop Detection
+	if stuck, analysis := a.LoopDetector.IsStuck(history); stuck {
+		slog.Warn("Agent stuck in loop", "type", analysis.LoopType, "times", analysis.RepeatTimes)
+		a.EventStream.AddEvent(events.Event{
+			ID:   uuid.New().String(),
+			Type: events.EventTypeObservation,
+			Content: models.LoopDetectionObservation{
+				Observation: "loop_detection",
+				Content:     fmt.Sprintf("⚠️ Loop detected! You are repeating the same action/observation pattern. Please stop and reflect on why this is happening. Try a different approach."),
+			},
+			Source: "runtime",
+		})
+		// We add the observation and return, effectively giving the agent a chance to react in the next step
+		return nil
+	}
+
 	messages := a.eventsToMessages(ctx, history)
 
-	// 2. LLM Completion
+	// 3. LLM Completion
 	resp, err := a.LLM.CompleteWithTools(ctx, messages, a.Tools)
 	if err != nil {
 		return fmt.Errorf("LLM completion error: %w", err)

@@ -37,8 +37,8 @@ The following features exist in the Python codebase but are **pending migration*
 | **Memory** | **Condenser** | `openhands/memory/condenser/` | Medium | Logic to summarize/truncate long conversation history for LLM context window management. |
 | **Observability** | **Tracing** | `openhands/core/logger.py` | Medium | Full OpenTelemetry tracing integration (currently stubs). |
 | **Runtime** | **Jupyter Kernel** | `openhands/runtime/plugins/jupyter/` | High | Python implementation uses real Jupyter kernels via `jupyter_client`. Go implementation currently uses `python3 -c` MVP. |
-| **Events** | **Task Tracking** | `openhands/events/observation/task_tracking.py` | Low | Specific event types for task progress tracking. |
-| **Events** | **Loop Recovery** | `openhands/events/observation/loop_recovery.py` | Medium | Logic to detect and recover from stuck agent loops. |
+| **Events** | **Task Tracking** | `openhands/events/observation/task_tracking.py` | ✅ Complete | Implemented `TaskTrackingObservation` and support in `EventStream`. |
+| **Events** | **Loop Recovery** | `openhands/events/observation/loop_recovery.py` | ✅ Complete | Implemented `LoopDetector` and integrated into Agent loop. |
 
 ## Do Not Implement
 

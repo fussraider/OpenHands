@@ -19,3 +19,33 @@ type CmdOutputObservation struct {
 	Hidden      bool              `json:"hidden,omitempty"`
 	ToolCallID  string            `json:"tool_call_id,omitempty"`
 }
+
+type TaskState string
+
+const (
+	TaskStateStarted    TaskState = "started"
+	TaskStateRunning    TaskState = "running"
+	TaskStateCompleted  TaskState = "completed"
+	TaskStateFailed     TaskState = "failed"
+	TaskStateDelegated  TaskState = "delegated"
+)
+
+// TaskTrackingObservation represents a change in task status or list
+type TaskTrackingObservation struct {
+	Observation string      `json:"observation"` // "task_tracking"
+	Content     string      `json:"content"`     // Message describing the update
+	TaskList    []TaskItem  `json:"task_list,omitempty"`
+}
+
+type TaskItem struct {
+	ID          string    `json:"id"`
+	Description string    `json:"description"`
+	State       TaskState `json:"state"`
+	Children    []TaskItem `json:"children,omitempty"`
+}
+
+// LoopDetectionObservation represents detection of an infinite loop
+type LoopDetectionObservation struct {
+	Observation string `json:"observation"` // "loop_detection"
+	Content     string `json:"content"`     // Warning message
+}

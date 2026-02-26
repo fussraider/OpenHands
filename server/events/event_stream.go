@@ -100,6 +100,14 @@ func (e *Event) UnmarshalJSON(data []byte) error {
 			var obs models.CmdOutputObservation
 			json.Unmarshal(aux.Content, &obs)
 			e.Content = obs
+		} else if probe.Observation == "task_tracking" {
+			var obs models.TaskTrackingObservation
+			json.Unmarshal(aux.Content, &obs)
+			e.Content = obs
+		} else if probe.Observation == "loop_detection" {
+			var obs models.LoopDetectionObservation
+			json.Unmarshal(aux.Content, &obs)
+			e.Content = obs
 		} else {
 			var m map[string]interface{}
 			json.Unmarshal(aux.Content, &m)

@@ -92,4 +92,34 @@ func TestEventUnmarshalPolymorphism(t *testing.T) {
 	if obs.Metadata.ExitCode != 0 {
 		t.Errorf("Exit code mismatch")
 	}
+
+	// Task Tracking Observation
+	jsonStrTask := `{"id":"3", "type":"observation", "content":{"observation":"task_tracking", "content":"Task updated", "task_list":[{"id":"1", "description":"task1", "state":"started"}]}}`
+	var e3 Event
+	if err := json.Unmarshal([]byte(jsonStrTask), &e3); err != nil {
+		t.Fatal(err)
+	}
+
+	taskObs, ok := e3.Content.(models.TaskTrackingObservation)
+	if !ok {
+		t.Fatalf("Expected TaskTrackingObservation, got %T", e3.Content)
+	}
+	if len(taskObs.TaskList) != 1 || taskObs.TaskList[0].ID != "1" {
+		t.Errorf("Task list mismatch")
+	}
+
+	// Loop Detection Observation
+	jsonStrLoop := `{"id":"4", "type":"observation", "content":{"observation":"loop_detection", "content":"Loop detected"}}`
+	var e4 Event
+	if err := json.Unmarshal([]byte(jsonStrLoop), &e4); err != nil {
+		t.Fatal(err)
+	}
+
+	loopObs, ok := e4.Content.(models.LoopDetectionObservation)
+	if !ok {
+		t.Fatalf("Expected LoopDetectionObservation, got %T", e4.Content)
+	}
+	if loopObs.Content != "Loop detected" {
+		t.Errorf("Loop content mismatch")
+	}
 }
