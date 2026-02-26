@@ -34,6 +34,6 @@ The following features exist in the Python codebase but are not yet implemented 
 | **Events** | **Rich Event Types** | 🟡 Medium | `openhands/events/` | Expand `Event` struct to support specific Action/Observation types (e.g., `CmdRunAction`, `CmdOutputObservation`) with proper validation. |
 | **API** | **Real GitHub Auth** | ✅ Complete | `openhands/server/routes/git.py` | Implemented actual OAuth token usage via `GithubService`. |
 | **Security** | **Sandboxing** | 🔴 Critical | `openhands/runtime/` | Ensure robust isolation for `LocalRuntime` (e.g., using Firejail or similar if running outside Docker). |
-| **Observability** | **Structured Logging** | 🟢 Low | `openhands/core/logger.py` | Replace standard `log` with structured logger (e.g., `slog` or `zap`). |
+| **Observability** | **Structured Logging** | ✅ Complete | `openhands/core/logger.py` | Replaced standard `log` with `log/slog` in main server and agent. |
 | **Enterprise** | **Multi-tenancy** | ⛔ Out of Scope | `enterprise/server/` | **DO NOT IMPLEMENT**. Enterprise feature. |
 | **Enterprise** | **SSO/SAML** | ⛔ Out of Scope | `enterprise/integrations/` | **DO NOT IMPLEMENT**. Enterprise feature. |

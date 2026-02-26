@@ -47,8 +47,8 @@ The following REST API endpoints are implemented:
 | POST | `/api/settings` | Update user settings | ✅ Full |
 | GET | `/api/secrets` | List secrets | ✅ Full |
 | POST | `/api/secrets` | Add secret | ✅ Full |
-| GET | `/api/github/repositories` | List GitHub repos | 🚧 Mock |
-| GET | `/api/conversations/{id}/trajectory` | Get session history | 🚧 Stub |
+| GET | `/api/github/repositories` | List GitHub repos | ✅ Full |
+| GET | `/api/conversations/{id}/trajectory` | Get session history | ✅ Full |
 | POST | `/api/conversations/{id}/feedback` | Submit feedback | 🚧 Stub |
 | GET | `/mcp/` | Model Context Protocol | 🚧 Stub |
 

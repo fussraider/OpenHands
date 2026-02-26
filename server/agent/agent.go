@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"openhands-go/server/events"
 	"openhands-go/server/llm"
 	"openhands-go/server/models"
@@ -157,7 +157,7 @@ func (a *Agent) Step(ctx context.Context) error {
 					Thought string `json:"thought"`
 				}
 				if err := json.Unmarshal([]byte(tc.FunctionCall.Arguments), &args); err != nil {
-					log.Printf("Error unmarshalling execute_bash args: %v", err)
+					slog.Error("Error unmarshalling execute_bash args", "error", err)
 					a.recordObservation(tc.ID, fmt.Sprintf("Error unmarshalling args: %v", err), "run")
 					continue
 				}
@@ -385,11 +385,11 @@ func (a *Agent) eventsToMessages(evts []events.Event) []llm.Message {
 }
 
 func (a *Agent) RunLoop(ctx context.Context) {
-	log.Printf("Starting CodeAct agent loop for conversation %s", a.ConversationID)
+	slog.Info("Starting CodeAct agent loop", "conversation_id", a.ConversationID)
 	// Init plugins
 	for _, p := range a.Plugins {
 		if err := p.Init(ctx, a.Runtime); err != nil {
-			log.Printf("Failed to init plugin %s: %v", p.Name(), err)
+			slog.Error("Failed to init plugin", "plugin", p.Name(), "error", err)
 		}
 	}
 
@@ -400,7 +400,7 @@ func (a *Agent) RunLoop(ctx context.Context) {
 		default:
 			err := a.Step(ctx)
 			if err != nil {
-				log.Printf("Agent step error: %v", err)
+				slog.Error("Agent step error", "error", err)
 				time.Sleep(5 * time.Second) // Backoff
 			}
 			time.Sleep(1 * time.Second) // Pace

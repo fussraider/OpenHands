@@ -2,23 +2,28 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"openhands-go/server/config"
 	"openhands-go/server/handlers"
+	"openhands-go/server/logger"
 	"openhands-go/server/middleware"
 	"openhands-go/server/ws"
 )
 
 func main() {
+	logger.Init()
+
 	if err := config.LoadConfig(); err != nil {
-		log.Fatal(err)
+		slog.Error("Failed to load config", "error", err)
+		panic(err)
 	}
 
 	handlers.InitHandlers()
 
 	if err := ws.InitSocketServer(handlers.ProcessSocketAction); err != nil {
-		log.Fatal(err)
+		slog.Error("Failed to init socket server", "error", err)
+		panic(err)
 	}
 
 	mux := http.NewServeMux()
@@ -80,8 +85,9 @@ func main() {
 	}
 	addr := fmt.Sprintf("%s:%d", host, config.AppConfig.Server.Port)
 
-	log.Printf("Starting server on %s", addr)
+	slog.Info("Starting server", "address", addr)
 	if err := http.ListenAndServe(addr, handler); err != nil {
-		log.Fatal(err)
+		slog.Error("Server failed", "error", err)
+		panic(err)
 	}
 }
