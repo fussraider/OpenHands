@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"openhands-go/server/agent/prompts"
+	"openhands-go/server/config"
 	"openhands-go/server/events"
 	"openhands-go/server/llm"
 	"openhands-go/server/models"
@@ -28,13 +30,21 @@ type Agent struct {
 	Tools          []llms.Tool
 	Plugins        []plugins.Plugin
 	Delegator      Delegator
+	PromptManager  *prompts.PromptManager
+	Config         *config.Config
 }
 
-func NewAgent(id, conversationID string, llmService *llm.LLMService, rt runtime.Runtime, es *events.EventStream, delegator Delegator) *Agent {
+func NewAgent(id, conversationID string, llmService *llm.LLMService, rt runtime.Runtime, es *events.EventStream, delegator Delegator, cfg *config.Config) *Agent {
 	// Initialize Plugins
 	plugs := []plugins.Plugin{
 		jupyter.NewJupyterPlugin(),
 		browser.NewBrowserPlugin(),
+	}
+
+	pm, err := prompts.New()
+	if err != nil {
+		slog.Error("Failed to initialize prompt manager", "error", err)
+		// Fallback or panic? For now log error.
 	}
 
 	agent := &Agent{
@@ -43,9 +53,25 @@ func NewAgent(id, conversationID string, llmService *llm.LLMService, rt runtime.
 		LLM:            llmService,
 		Runtime:        rt,
 		EventStream:    es,
-		SystemPrompt:   "You are a helpful coding agent using the CodeAct framework. You can execute bash commands to solve tasks. When you are done, call finish.",
 		Plugins:        plugs,
 		Delegator:      delegator,
+		PromptManager:  pm,
+		Config:         cfg,
+	}
+
+	// Render System Prompt
+	if pm != nil {
+		sysPrompt, err := pm.RenderSystemPrompt(prompts.SystemPromptContext{
+			CLIMode: false, // Default to sandbox mode
+		})
+		if err != nil {
+			slog.Error("Failed to render system prompt", "error", err)
+			agent.SystemPrompt = "You are a helpful coding agent using the CodeAct framework. You can execute bash commands to solve tasks. When you are done, call finish."
+		} else {
+			agent.SystemPrompt = sysPrompt
+		}
+	} else {
+		agent.SystemPrompt = "You are a helpful coding agent using the CodeAct framework. You can execute bash commands to solve tasks. When you are done, call finish."
 	}
 
 	// Collect tools
@@ -135,7 +161,7 @@ func NewAgent(id, conversationID string, llmService *llm.LLMService, rt runtime.
 func (a *Agent) Step(ctx context.Context) error {
 	// 1. Get History & Construct Messages
 	history := a.EventStream.GetEvents()
-	messages := a.eventsToMessages(history)
+	messages := a.eventsToMessages(ctx, history)
 
 	// 2. LLM Completion
 	resp, err := a.LLM.CompleteWithTools(ctx, messages, a.Tools)
@@ -295,9 +321,44 @@ func (a *Agent) recordObservation(toolCallID, content, obsType string, extras ..
 	})
 }
 
-func (a *Agent) eventsToMessages(evts []events.Event) []llm.Message {
+func (a *Agent) getAdditionalInfo(ctx context.Context) string {
+	if a.PromptManager == nil {
+		return ""
+	}
+
+	// Gather info
+	cwd, _ := a.Runtime.GetCwd(ctx)
+	if cwd == "" {
+		cwd = "/workspace"
+	}
+
+	infoCtx := prompts.AdditionalInfoContext{
+		RuntimeInfo: &prompts.RuntimeInfo{
+			WorkingDir: cwd,
+			Date:       time.Now().Format("2006-01-02"),
+		},
+		// TODO: Populate RepositoryInfo, AvailableHosts, etc.
+	}
+
+	out, err := a.PromptManager.RenderAdditionalInfo(infoCtx)
+	if err != nil {
+		slog.Error("Failed to render additional info", "error", err)
+		return ""
+	}
+	return out
+}
+
+func (a *Agent) eventsToMessages(ctx context.Context, evts []events.Event) []llm.Message {
 	msgs := []llm.Message{
 		{Role: "system", Content: a.SystemPrompt},
+	}
+
+	// Add Additional Info
+	if additionalInfo := a.getAdditionalInfo(ctx); additionalInfo != "" {
+		msgs = append(msgs, llm.Message{
+			Role:    "user",
+			Content: additionalInfo,
+		})
 	}
 
 	for _, e := range evts {

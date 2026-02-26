@@ -80,7 +80,7 @@ func (rm *RuntimeManager) StartAgent(ctx context.Context, conversationID string,
 		return err
 	}
 	// Pass rm as Delegator
-	ag := agent.NewAgent("default-agent", conversationID, llmService, rt, es, rm)
+	ag := agent.NewAgent("default-agent", conversationID, llmService, rt, es, rm, config.AppConfig)
 
 	rm.agents[conversationID] = ag
 

@@ -174,6 +174,13 @@ func (r *DockerRuntime) Read(p []byte) (n int, err error) {
 	return r.hijackedResp.Reader.Read(p)
 }
 
+func (r *DockerRuntime) GetCwd(ctx context.Context) (string, error) {
+	if r.shell != nil {
+		return r.shell.GetCwd(), nil
+	}
+	return "/workspace", nil
+}
+
 func (r *DockerRuntime) Close() error {
 	var firstErr error
 	if r.shell != nil {

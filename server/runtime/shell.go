@@ -218,6 +218,15 @@ func (s *ShellSession) Execute(ctx context.Context, command string) (string, int
 	return output, exitCode, nil
 }
 
+func (s *ShellSession) GetCwd() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.workDir == "" {
+		return "/workspace" // Default fallback
+	}
+	return s.workDir
+}
+
 func (s *ShellSession) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

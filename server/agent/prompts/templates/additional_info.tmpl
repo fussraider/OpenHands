@@ -1,0 +1,55 @@
+{{ if .RepositoryInfo }}
+<REPOSITORY_INFO>
+At the user's request, repository {{ .RepositoryInfo.RepoName }} has been cloned to {{ .RepositoryInfo.RepoDirectory }} in the current working directory.
+{{ if .RepositoryInfo.BranchName }}The repository has been checked out to branch "{{ .RepositoryInfo.BranchName }}".
+
+IMPORTANT: You should work within the current branch "{{ .RepositoryInfo.BranchName }}" unless:
+    1. the user explicitly instructs otherwise
+    2. the current branch is "main", "master", or another default branch where direct pushes may be unsafe
+{{ end }}
+</REPOSITORY_INFO>
+{{ end }}
+{{ if .RepositoryInstructions }}
+<REPOSITORY_INSTRUCTIONS>
+{{ .RepositoryInstructions }}
+</REPOSITORY_INSTRUCTIONS>
+{{ end }}
+{{ if .RuntimeInfo }}
+<RUNTIME_INFORMATION>
+{{ if .RuntimeInfo.WorkingDir }}
+The current working directory is {{ .RuntimeInfo.WorkingDir }}
+{{ end }}
+{{ if .RuntimeInfo.AvailableHosts }}
+The user has access to the following hosts for accessing a web application,
+each of which has a corresponding port:
+{{ range $host, $port := .RuntimeInfo.AvailableHosts }}
+* {{ $host }} (port {{ $port }})
+{{ end }}
+When starting a web server, use the corresponding ports. You should also
+set any options to allow iframes and CORS requests, and allow the server to
+be accessed from any host (e.g. 0.0.0.0).
+For example, if you are using vite.config.js, you should set server.host and server.allowedHosts to true
+{{ end }}
+{{ if .RuntimeInfo.AdditionalAgentInstructions }}
+{{ .RuntimeInfo.AdditionalAgentInstructions }}
+{{ end }}
+{{ if .RuntimeInfo.CustomSecretsDescriptions }}
+<CUSTOM_SECRETS>
+You have access to the following environment variables
+{{ range $name, $desc := .RuntimeInfo.CustomSecretsDescriptions }}
+* **${{ $name }}**: {{ $desc }}
+{{ end }}
+</CUSTOM_SECRETS>
+{{ end }}
+{{ if .RuntimeInfo.Date }}
+Today's date is {{ .RuntimeInfo.Date }} (UTC).
+{{ end }}
+</RUNTIME_INFORMATION>
+{{ if .ConversationInstructions }}
+{{ if .ConversationInstructions.Content }}
+<CONVERSATION_INSTRUCTIONS>
+{{ .ConversationInstructions.Content }}
+</CONVERSATION_INSTRUCTIONS>
+{{ end }}
+{{ end }}
+{{ end }}

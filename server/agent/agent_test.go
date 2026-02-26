@@ -23,6 +23,7 @@ func (m *MockRuntime) Execute(ctx context.Context, command string, args ...strin
 func (m *MockRuntime) Write(p []byte) (n int, err error) { return len(p), nil }
 func (m *MockRuntime) Read(p []byte) (n int, err error)  { return 0, nil }
 func (m *MockRuntime) Close() error                      { return nil }
+func (m *MockRuntime) GetCwd(ctx context.Context) (string, error) { return "/mock/cwd", nil }
 
 func TestEventsToMessages(t *testing.T) {
 	// Setup
@@ -66,40 +67,58 @@ func TestEventsToMessages(t *testing.T) {
 
 	// Create Agent
 	// We pass nil LLM service as we just test eventsToMessages
-	agent := NewAgent("test-agent", "test-conv", &llm.LLMService{}, &MockRuntime{}, es, nil)
+	agent := NewAgent("test-agent", "test-conv", &llm.LLMService{}, &MockRuntime{}, es, nil, nil)
 
-	msgs := agent.eventsToMessages(es.GetEvents())
+	msgs := agent.eventsToMessages(context.Background(), es.GetEvents())
 
 	// Verify
 	// 0: System
-	// 1: User "Hello"
-	// 2: Assistant ToolCall "ls"
-	// 3: Tool Output "file1 file2"
+	// 1: Additional Info (User) - if PromptManager loaded
+	// 2: User "Hello"
+	// 3: Assistant ToolCall "ls"
+	// 4: Tool Output "file1 file2"
 
-	if len(msgs) != 4 {
-		t.Errorf("Expected 4 messages, got %d", len(msgs))
+	expectedLen := 5
+	if agent.PromptManager == nil {
+		expectedLen = 4
+	}
+
+	if len(msgs) != expectedLen {
+		t.Errorf("Expected %d messages, got %d", expectedLen, len(msgs))
 		return
 	}
 
-	if msgs[0].Role != "system" {
-		t.Errorf("Msg 0 role mismatch: %s", msgs[0].Role)
+	idx := 0
+	if msgs[idx].Role != "system" {
+		t.Errorf("Msg %d role mismatch: %s", idx, msgs[idx].Role)
+	}
+	idx++
+
+	if agent.PromptManager != nil {
+		if msgs[idx].Role != "user" {
+			t.Errorf("Msg %d (AdditionalInfo) role mismatch: %s", idx, msgs[idx].Role)
+		}
+		// Content validation for AdditionalInfo could be done but we skip for now
+		idx++
 	}
 
-	if msgs[1].Role != "user" || msgs[1].Content != "Hello" {
-		t.Errorf("Msg 1 mismatch")
+	if msgs[idx].Role != "user" || msgs[idx].Content != "Hello" {
+		t.Errorf("Msg %d mismatch: %v", idx, msgs[idx])
 	}
+	idx++
 
-	if msgs[2].Role != "assistant" || len(msgs[2].ToolCalls) != 1 {
-		t.Errorf("Msg 2 mismatch: expected assistant with tool call")
+	if msgs[idx].Role != "assistant" || len(msgs[idx].ToolCalls) != 1 {
+		t.Errorf("Msg %d mismatch: expected assistant with tool call", idx)
 	} else {
-		tc := msgs[2].ToolCalls[0]
+		tc := msgs[idx].ToolCalls[0]
 		if tc.ID != "call_123" || tc.FunctionCall.Name != "execute_bash" {
 			t.Errorf("Tool call mismatch: %v", tc)
 		}
 	}
+	idx++
 
-	if msgs[3].Role != "tool" || msgs[3].Content != "file1 file2" || msgs[3].ToolCallID != "call_123" {
-		t.Errorf("Msg 3 mismatch: %v", msgs[3])
+	if msgs[idx].Role != "tool" || msgs[idx].Content != "file1 file2" || msgs[idx].ToolCallID != "call_123" {
+		t.Errorf("Msg %d mismatch: %v", idx, msgs[idx])
 	}
 }
 
@@ -151,7 +170,7 @@ func (p *MockPlugin) HandleToolCall(ctx context.Context, name string, args strin
 }
 
 func TestAgentPlugins(t *testing.T) {
-	agent := NewAgent("test", "conv", &llm.LLMService{}, &MockRuntime{}, events.NewEventStream("conv", ""), nil)
+	agent := NewAgent("test", "conv", &llm.LLMService{}, &MockRuntime{}, events.NewEventStream("conv", ""), nil, nil)
 
 	// Add mock plugin manually
 	agent.Plugins = append(agent.Plugins, &MockPlugin{})

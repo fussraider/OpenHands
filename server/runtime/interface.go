@@ -12,6 +12,9 @@ type Runtime interface {
 	Read(p []byte) (n int, err error)
 	Close() error
 
+	// GetCwd returns the current working directory of the shell session
+	GetCwd(ctx context.Context) (string, error)
+
 	// Future methods for parity with Python
 	// RunAction(action Action) (Observation, error)
 	// ReadFile(path string) ([]byte, error)

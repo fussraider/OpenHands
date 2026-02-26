@@ -23,6 +23,7 @@ This file tracks the migration status of OpenHands backend features from Python 
 | Agent Logic | `openhands/core/agent/` | `server/agent/agent.go` | ✅ Complete | `CodeActAgent` implementation with multi-turn loop and tool calling. |
 | Plugin System | `openhands/runtime/plugins/` | `server/runtime/plugins/` | ✅ Complete | Generic `Plugin` interface and integration. |
 | Persistence | `openhands/storage/` | `server/events/event_stream.go` | ✅ Complete | JSONL file-based persistence for events/feedback. |
+| Prompt Loading | `openhands/agenthub/codeact_agent/prompts/` | `server/agent/prompts/` | ✅ Complete | Templates embedded and rendered dynamically (System Prompt + Additional Info). |
 
 ## Remaining Python Features to Port
 
@@ -30,7 +31,6 @@ The following features exist in the Python codebase but are **pending migration*
 
 | Area | Feature | Python Reference | Complexity | Notes |
 |---|---|---|---|---|
-| **Skills** | **Prompt Loading** | `openhands/skills/`, `openhands/agenthub/codeact_agent/prompts/` | Low | Need to load Jinja2 templates and Markdown skill definitions dynamically instead of hardcoding system prompts. |
 | **MCP** | **Full Client Impl** | `openhands/mcp/` | High | Full implementation of Model Context Protocol client to interact with MCP servers. |
 | **Agents** | **Other Agents** | `openhands/agenthub/` | Medium | Porting `BrowsingAgent`, `VisualBrowsingAgent`, `LocAgent`. |
 | **Security** | **Analyzer** | `openhands/security/analyzer.py` | High | Prompt injection detection and safety checks. |

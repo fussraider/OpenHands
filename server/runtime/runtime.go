@@ -100,6 +100,13 @@ func (r *LocalRuntime) Read(p []byte) (n int, err error) {
 	return r.pty.Read(p)
 }
 
+func (r *LocalRuntime) GetCwd(ctx context.Context) (string, error) {
+	if r.shell != nil {
+		return r.shell.GetCwd(), nil
+	}
+	return r.workDir, nil
+}
+
 func (r *LocalRuntime) Close() error {
 	var firstErr error
 	if r.shell != nil {
