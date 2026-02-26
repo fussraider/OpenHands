@@ -12,7 +12,7 @@ This file tracks the migration status of OpenHands backend features from Python 
 | Github Integration | `openhands/server/routes/git.py` | `server/handlers/github.go` | ✅ Complete | Implemented using `google/go-github`. |
 | Files API | `openhands/server/routes/files.py` | `server/handlers/files.go` | ✅ Complete | Local workspace access implemented with security checks. |
 | Secrets API | `openhands/server/routes/secrets.py` | `server/handlers/secrets.go` | ✅ Complete | In-memory secrets store implemented. |
-| Feedback API | `openhands/server/routes/feedback.py` | `server/handlers/feedback.go` | ✅ Complete | Stub implementation. |
+| Feedback API | `openhands/server/routes/feedback.py` | `server/handlers/feedback.go` | ✅ Complete | Implemented persistent feedback storage. |
 | Trajectory API | `openhands/server/routes/trajectory.py` | `server/handlers/trajectory.go` | ✅ Complete | Implemented with persistent event stream. |
 | MCP Integration | `openhands/server/routes/mcp.py` | `server/handlers/mcp.go` | ✅ Complete | Stub implementation. |
 | Public API | `openhands/server/routes/public.py` | `server/handlers/options.go` | ✅ Complete | Implemented as Options API. |
@@ -31,7 +31,7 @@ The following features exist in the Python codebase but are not yet implemented 
 | **Runtime** | **Plugin System** | ✅ Complete | `openhands/runtime/plugins/` | Implemented generic `Plugin` interface and integration into `Agent`. |
 | **Agent** | **Complex Agent Logic** | ✅ Complete | `openhands/core/agent/` | Implemented `CodeActAgent` logic with tool calling (`execute_bash`) and multi-turn reasoning using `langchaingo`. |
 | **Agent** | **Delegation** | ✅ Complete | `openhands/agenthub/` | Implemented `Delegator` interface and `delegate` tool support. `RuntimeManager` implements stub. |
-| **Events** | **Rich Event Types** | 🟡 Medium | `openhands/events/` | Expand `Event` struct to support specific Action/Observation types (e.g., `CmdRunAction`, `CmdOutputObservation`) with proper validation. |
+| **Events** | **Rich Event Types** | ✅ Complete | `openhands/events/` | Implemented custom `UnmarshalJSON` for polymorphic `Event` content and strongly typed Actions/Observations. |
 | **API** | **Real GitHub Auth** | ✅ Complete | `openhands/server/routes/git.py` | Implemented actual OAuth token usage via `GithubService`. |
 | **Security** | **Sandboxing** | 🔴 Critical | `openhands/runtime/` | Ensure robust isolation for `LocalRuntime` (e.g., using Firejail or similar if running outside Docker). |
 | **Observability** | **Structured Logging** | ✅ Complete | `openhands/core/logger.py` | Replaced standard `log` with `log/slog` in main server and agent. |

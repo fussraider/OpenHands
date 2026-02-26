@@ -303,80 +303,80 @@ func (a *Agent) eventsToMessages(evts []events.Event) []llm.Message {
 	for _, e := range evts {
 		switch e.Type {
 		case events.EventTypeAction:
-			bytes, _ := json.Marshal(e.Content)
-
 			if e.Source == "agent" {
-				// CmdRunAction
-				var cmdAction models.CmdRunAction
-				if err := json.Unmarshal(bytes, &cmdAction); err == nil && cmdAction.Action == models.ActionTypeCmdRun {
+				switch act := e.Content.(type) {
+				case models.CmdRunAction:
 					msgs = append(msgs, llm.Message{
 						Role: "assistant",
 						ToolCalls: []llms.ToolCall{
 							{
-								ID:   cmdAction.ToolCallID,
+								ID:   act.ToolCallID,
 								Type: "function",
 								FunctionCall: &llms.FunctionCall{
 									Name:      "execute_bash",
-									Arguments: fmt.Sprintf(`{"command": %q, "thought": %q}`, cmdAction.Command, cmdAction.Thought),
+									Arguments: fmt.Sprintf(`{"command": %q, "thought": %q}`, act.Command, act.Thought),
 								},
 							},
 						},
 					})
-					continue
-				}
-				// Delegate Action
-				var delegateAction models.AgentDelegateAction
-				if err := json.Unmarshal(bytes, &delegateAction); err == nil && delegateAction.Action == models.ActionTypeDelegate {
-					inputsBytes, _ := json.Marshal(delegateAction.Inputs)
+				case models.AgentDelegateAction:
+					inputsBytes, _ := json.Marshal(act.Inputs)
 					msgs = append(msgs, llm.Message{
 						Role: "assistant",
 						ToolCalls: []llms.ToolCall{
 							{
-								ID:   delegateAction.ToolCallID,
+								ID:   act.ToolCallID,
 								Type: "function",
 								FunctionCall: &llms.FunctionCall{
 									Name:      "delegate",
-									Arguments: fmt.Sprintf(`{"agent": %q, "inputs": %s, "thought": %q}`, delegateAction.Agent, string(inputsBytes), delegateAction.Thought),
+									Arguments: fmt.Sprintf(`{"agent": %q, "inputs": %s, "thought": %q}`, act.Agent, string(inputsBytes), act.Thought),
 								},
 							},
 						},
 					})
-					continue
-				}
-
-				// Message Action
-				var msgAction models.MessageAction
-				if err := json.Unmarshal(bytes, &msgAction); err == nil && msgAction.Action == models.ActionTypeMessage {
+				case models.MessageAction:
 					msgs = append(msgs, llm.Message{
 						Role:    "assistant",
-						Content: msgAction.Content,
+						Content: act.Content,
 					})
-					continue
 				}
 			} else {
 				// User action
-				var msgAction models.MessageAction
-				if err := json.Unmarshal(bytes, &msgAction); err == nil {
+				switch act := e.Content.(type) {
+				case models.MessageAction:
 					msgs = append(msgs, llm.Message{
 						Role:    "user",
-						Content: msgAction.Content,
+						Content: act.Content,
 					})
-					continue
+				case string:
+					msgs = append(msgs, llm.Message{
+						Role:    "user",
+						Content: act,
+					})
+				default:
+					// Try marshalling generic content
+					bytes, _ := json.Marshal(e.Content)
+					msgs = append(msgs, llm.Message{
+						Role:    "user",
+						Content: string(bytes),
+					})
 				}
-				msgs = append(msgs, llm.Message{
-					Role:    "user",
-					Content: string(bytes),
-				})
 			}
 
 		case events.EventTypeObservation:
-			bytes, _ := json.Marshal(e.Content)
-			var obs models.CmdOutputObservation
-			if err := json.Unmarshal(bytes, &obs); err == nil {
+			switch obs := e.Content.(type) {
+			case models.CmdOutputObservation:
 				msgs = append(msgs, llm.Message{
 					Role:       "tool",
 					Content:    obs.Content,
 					ToolCallID: obs.ToolCallID,
+				})
+			default:
+				// Fallback
+				bytes, _ := json.Marshal(e.Content)
+				msgs = append(msgs, llm.Message{
+					Role:    "tool",
+					Content: string(bytes),
 				})
 			}
 		}
