@@ -3,9 +3,11 @@ package services
 import (
 	"context"
 	"fmt"
+	"openhands-go/server/config"
 	"openhands-go/server/events"
 	"openhands-go/server/models"
 	"openhands-go/server/store"
+	"path/filepath"
 
 	"github.com/google/uuid"
 )
@@ -28,7 +30,13 @@ func NewActionService(cs *store.ConversationStore, rm *RuntimeManager, broadcast
 
 func (s *ActionService) GetEventStream(conversationID string) *events.EventStream {
 	if _, ok := s.eventStreams[conversationID]; !ok {
-		es := events.NewEventStream(conversationID)
+		// Determine file path for persistence
+		var filePath string
+		if config.AppConfig != nil && config.AppConfig.FileStorePath != "" {
+			filePath = filepath.Join(config.AppConfig.FileStorePath, "sessions", conversationID, "events.jsonl")
+		}
+
+		es := events.NewEventStream(conversationID, filePath)
 		if s.eventBroadcaster != nil {
 			es.Subscribe(func(event events.Event) {
 				s.eventBroadcaster(conversationID, event)
