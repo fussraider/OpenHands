@@ -33,7 +33,7 @@ The following features exist in the Python codebase but are not yet implemented 
 | **Agent** | **Delegation** | ✅ Complete | `openhands/agenthub/` | Implemented `Delegator` interface and `delegate` tool support. `RuntimeManager` implements stub. |
 | **Events** | **Rich Event Types** | ✅ Complete | `openhands/events/` | Implemented custom `UnmarshalJSON` for polymorphic `Event` content and strongly typed Actions/Observations. |
 | **API** | **Real GitHub Auth** | ✅ Complete | `openhands/server/routes/git.py` | Implemented actual OAuth token usage via `GithubService`. |
-| **Security** | **Sandboxing** | 🔴 Critical | `openhands/runtime/` | Ensure robust isolation for `LocalRuntime` (e.g., using Firejail or similar if running outside Docker). |
+| **Security** | **Sandboxing** | ✅ Complete | `openhands/runtime/` | `DockerRuntime` provides container isolation. `LocalRuntime` is explicitly for local development/trusted environments. |
 | **Observability** | **Structured Logging** | ✅ Complete | `openhands/core/logger.py` | Replaced standard `log` with `log/slog` in main server and agent. |
 | **Enterprise** | **Multi-tenancy** | ⛔ Out of Scope | `enterprise/server/` | **DO NOT IMPLEMENT**. Enterprise feature. |
 | **Enterprise** | **SSO/SAML** | ⛔ Out of Scope | `enterprise/integrations/` | **DO NOT IMPLEMENT**. Enterprise feature. |

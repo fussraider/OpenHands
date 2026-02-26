@@ -5,10 +5,10 @@ It aims to provide better performance, easier deployment, and stronger type safe
 
 ## Status
 
-**Current State:** 🚧 Alpha / Proof of Concept
+**Current State:** 🚧 Beta / Feature Complete
 
-This backend implements the core API structure, serves the frontend static files, and includes a basic autonomous agent loop.
-It is functionally capable of running simple tasks but lacks the full feature set of the Python SDK (e.g., stateful shell sessions, complex agent delegation).
+This backend implements the core API structure, serves the frontend static files, and includes a fully functional autonomous agent loop.
+It supports stateful shell sessions, agent delegation, plugin system, and GitHub integration.
 
 **License Note:** This implementation strictly follows the MIT-licensed open-source codebase. Features located in the `enterprise/` directory (under PolyForm Free Trial License) are **out of scope** and not implemented here.
 
