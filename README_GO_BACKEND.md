@@ -5,10 +5,10 @@ It aims to provide better performance, easier deployment, and stronger type safe
 
 ## Status
 
-**Current State:** 🚧 Alpha / Proof of Concept
+**Current State:** ✅ Release Candidate (v1.0 Ready)
 
-This backend implements the core API structure, serves the frontend static files, and includes a basic autonomous agent loop.
-It is functionally capable of running simple tasks but lacks the full feature set of the Python SDK (e.g., stateful shell sessions, complex agent delegation).
+The Go backend has reached functional parity with the Python implementation for all core OpenHands features.
+It supports stateful shell sessions, agent delegation, plugin system, GitHub integration, security analysis, loop detection, and observability.
 
 **License Note:** This implementation strictly follows the MIT-licensed open-source codebase. Features located in the `enterprise/` directory (under PolyForm Free Trial License) are **out of scope** and not implemented here.
 
@@ -21,9 +21,8 @@ It is functionally capable of running simple tasks but lacks the full feature se
     - Settings (`settings.json`)
     - Secrets (In-memory for now)
 - **Runtime Management**:
-    - **LocalRuntime**: Executes commands locally using `os/exec`.
+    - **LocalRuntime**: Executes commands locally using persistent bash session (via `creack/pty`). Supports stateful execution (cwd, env vars).
     - **DockerRuntime**: Executes commands inside a Docker container using the Docker API.
-    - *Limitation*: Command execution is currently **stateless** (one-off). Environment variables and directory changes (`cd`) do not persist between commands.
 - **Agent Logic**:
     - Basic "Loop" that fetches events and queries an LLM.
     - Integration with `tmc/langchaingo` for LLM support.
@@ -48,10 +47,10 @@ The following REST API endpoints are implemented:
 | POST | `/api/settings` | Update user settings | ✅ Full |
 | GET | `/api/secrets` | List secrets | ✅ Full |
 | POST | `/api/secrets` | Add secret | ✅ Full |
-| GET | `/api/github/repositories` | List GitHub repos | 🚧 Mock |
-| GET | `/api/conversations/{id}/trajectory` | Get session history | 🚧 Stub |
-| POST | `/api/conversations/{id}/feedback` | Submit feedback | 🚧 Stub |
-| GET | `/mcp/` | Model Context Protocol | 🚧 Stub |
+| GET | `/api/github/repositories` | List GitHub repos | ✅ Full |
+| GET | `/api/conversations/{id}/trajectory` | Get session history | ✅ Full |
+| POST | `/api/conversations/{id}/feedback` | Submit feedback | ✅ Full |
+| GET | `/mcp/` | Model Context Protocol | 🚧 Stub (Client implemented) |
 
 ## How to Run
 

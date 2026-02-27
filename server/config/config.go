@@ -21,6 +21,7 @@ type Config struct {
 	Agent         AgentConfig   `toml:"agent"`
 	Sandbox       SandboxConfig `toml:"sandbox"`
 	Server        ServerConfig  `toml:"server"`
+	Github        GithubConfig  `toml:"github"`
 }
 
 type LLMConfig struct {
@@ -30,7 +31,9 @@ type LLMConfig struct {
 }
 
 type AgentConfig struct {
-	Name string `toml:"name"`
+	Name             string `toml:"name"`
+	EnableHistoryTruncation bool `toml:"enable_history_truncation"`
+	MaxEvents        int    `toml:"max_events"` // Simple condenser threshold
 }
 
 type SandboxConfig struct {
@@ -40,6 +43,12 @@ type SandboxConfig struct {
 type ServerConfig struct {
 	Host string `toml:"host"`
 	Port int    `toml:"port"`
+}
+
+type GithubConfig struct {
+	ClientID     string `toml:"client_id"`
+	ClientSecret string `toml:"client_secret"`
+	RedirectURL  string `toml:"redirect_url"`
 }
 
 var AppConfig *Config
@@ -92,6 +101,12 @@ func LoadConfig() error {
 	}
 	if fileStorePath := os.Getenv("FILE_STORE_PATH"); fileStorePath != "" {
 		AppConfig.FileStorePath = fileStorePath
+	}
+	if ghClientID := os.Getenv("GITHUB_CLIENT_ID"); ghClientID != "" {
+		AppConfig.Github.ClientID = ghClientID
+	}
+	if ghClientSecret := os.Getenv("GITHUB_CLIENT_SECRET"); ghClientSecret != "" {
+		AppConfig.Github.ClientSecret = ghClientSecret
 	}
 
 	// Default to 0.0.0.0 if running in Docker (checking widely used convention)

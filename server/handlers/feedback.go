@@ -3,6 +3,10 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"openhands-go/server/config"
+	"os"
+	"path/filepath"
+	"sync"
 )
 
 type FeedbackRequest struct {
@@ -17,18 +21,30 @@ type FeedbackResponse struct {
 	Status string `json:"status"`
 }
 
-func SubmitFeedbackHandler(w http.ResponseWriter, r *http.Request) {
-	// conversationID := r.PathValue("id")
+var feedbackMu sync.Mutex
 
+func SubmitFeedbackHandler(w http.ResponseWriter, r *http.Request) {
 	var req FeedbackRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Mock storing feedback:
-	// In reality, this would store the feedback and the trajectory (events).
-	// For now, we just return success.
+	// Store feedback in file
+	if config.AppConfig.FileStorePath != "" {
+		feedbackPath := filepath.Join(config.AppConfig.FileStorePath, "feedback.jsonl")
+
+		feedbackMu.Lock()
+		defer feedbackMu.Unlock()
+
+		f, err := os.OpenFile(feedbackPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err == nil {
+			defer f.Close()
+			data, _ := json.Marshal(req)
+			f.Write(data)
+			f.Write([]byte("\n"))
+		}
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(FeedbackResponse{Status: "ok"})

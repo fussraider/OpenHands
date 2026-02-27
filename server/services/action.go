@@ -3,9 +3,11 @@ package services
 import (
 	"context"
 	"fmt"
+	"openhands-go/server/config"
 	"openhands-go/server/events"
 	"openhands-go/server/models"
 	"openhands-go/server/store"
+	"path/filepath"
 
 	"github.com/google/uuid"
 )
@@ -28,7 +30,13 @@ func NewActionService(cs *store.ConversationStore, rm *RuntimeManager, broadcast
 
 func (s *ActionService) GetEventStream(conversationID string) *events.EventStream {
 	if _, ok := s.eventStreams[conversationID]; !ok {
-		es := events.NewEventStream(conversationID)
+		// Determine file path for persistence
+		var filePath string
+		if config.AppConfig != nil && config.AppConfig.FileStorePath != "" {
+			filePath = filepath.Join(config.AppConfig.FileStorePath, "sessions", conversationID, "events.jsonl")
+		}
+
+		es := events.NewEventStream(conversationID, filePath)
 		if s.eventBroadcaster != nil {
 			es.Subscribe(func(event events.Event) {
 				s.eventBroadcaster(conversationID, event)
@@ -75,33 +83,27 @@ func (s *ActionService) ExecuteAction(ctx context.Context, conversationID string
 	})
 
 	// 3. Execute in Runtime
-	// Note: LocalRuntime currently starts a new process for every command if used via Start().
-	// But `ExecuteAction` implies a persistent session or one-off command.
-	// `LocalRuntime` implementation in `runtime.go` uses `exec.Command`, which is one-off.
-	// So we assume one-off execution for now.
-
-	err = rt.Start(ctx, "bash", "-c", req.Args)
+	// Use persistent Execute
+	output, exitCode, err := rt.Execute(ctx, "bash", "-c", req.Args)
 	if err != nil {
 		return "", err
 	}
-	// For LocalRuntime, we need to handle cleanup if it's one-off
-	// But `runtimeManager` keeps it. This mismatch needs fixing in future.
-	// For now, we just close it after use if it's not meant to be persistent shell.
-	defer rt.Close()
+	// Note: Do not Close runtime here, it is persistent (managed by RuntimeManager).
 
-	// 4. Read Output
-	buf := make([]byte, 1024)
-	n, err := rt.Read(buf)
-	output := ""
-	if err == nil {
-		output = string(buf[:n])
+	// 4. Add Observation to EventStream
+	obs := models.CmdOutputObservation{
+		Observation: "run",
+		Content:     output,
+		Metadata: models.CmdOutputMetadata{
+			ExitCode: exitCode,
+		},
+		Command: req.Args,
 	}
 
-	// 5. Add Observation to EventStream
 	es.AddEvent(events.Event{
 		ID:      uuid.New().String(),
 		Type:    events.EventTypeObservation,
-		Content: map[string]string{"output": output},
+		Content: obs,
 		Source:  "runtime",
 	})
 

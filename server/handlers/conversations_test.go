@@ -6,8 +6,25 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"openhands-go/server/models"
+	"openhands-go/server/services"
+	"openhands-go/server/store"
+	"os"
 	"testing"
 )
+
+func init() {
+	f, _ := os.CreateTemp("", "conversations.json")
+	f.Close()
+	ConversationStore = store.NewConversationStore(f.Name())
+
+	f2, _ := os.CreateTemp("", "settings.json")
+	f2.Close()
+	SettingsStore = store.NewSettingsStore(f2.Name())
+
+	RuntimeManager = services.NewRuntimeManager()
+	// Mock broadcaster
+	ActionService = services.NewActionService(ConversationStore, RuntimeManager, nil)
+}
 
 func TestNewConversationHandler(t *testing.T) {
 	reqBody := models.InitSessionRequest{
@@ -43,7 +60,7 @@ func TestNewConversationHandler(t *testing.T) {
 func TestSearchConversationsHandler(t *testing.T) {
 	// First create a conversation to ensure list is not empty
 	reqBody := models.InitSessionRequest{Repository: "test-repo-2"}
-	conversationStore.CreateConversation(reqBody)
+	ConversationStore.CreateConversation(reqBody)
 
 	req, err := http.NewRequest("GET", "/api/conversations", nil)
 	if err != nil {
@@ -73,7 +90,7 @@ func TestSearchConversationsHandler(t *testing.T) {
 func TestGetConversationHandler(t *testing.T) {
 	// Create a conversation
 	reqBody := models.InitSessionRequest{Repository: "test-repo-3"}
-	created, _ := conversationStore.CreateConversation(reqBody)
+	created, _ := ConversationStore.CreateConversation(reqBody)
 
 	// Create request with path value
 	req, err := http.NewRequest("GET", "/api/conversations/"+created.ConversationID, nil)

@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
 	"openhands-go/server/agent"
 	"openhands-go/server/config"
 	"openhands-go/server/events"
@@ -78,7 +79,8 @@ func (rm *RuntimeManager) StartAgent(ctx context.Context, conversationID string,
 	if err != nil {
 		return err
 	}
-	ag := agent.NewAgent("default-agent", conversationID, llmService, rt, es)
+	// Pass rm as Delegator
+	ag := agent.NewAgent("default-agent", conversationID, llmService, rt, es, rm, config.AppConfig)
 
 	rm.agents[conversationID] = ag
 
@@ -106,4 +108,10 @@ func (rm *RuntimeManager) StopRuntime(conversationID string) error {
 	delete(rm.agents, conversationID)
 
 	return nil
+}
+
+// Delegate implements agent.Delegator
+func (rm *RuntimeManager) Delegate(ctx context.Context, agentName string, inputs map[string]interface{}) (map[string]interface{}, error) {
+	// TODO: Implement actual delegation (spawning sub-agent)
+	return nil, fmt.Errorf("delegation not implemented")
 }

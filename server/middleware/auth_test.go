@@ -50,12 +50,12 @@ func TestAuthMiddleware(t *testing.T) {
 	// NOTE: Currently skipping auth for invalid tokens in development/mock mode (returning mock user)
 	// See middleware/auth.go
 	/*
-	req, _ = http.NewRequest("GET", "/api/conversations", nil)
-	req.Header.Set("Authorization", "Bearer invalid-token")
-	rr = httptest.NewRecorder()
-	handler.ServeHTTP(rr, req)
-	if rr.Code != http.StatusUnauthorized {
-		t.Errorf("Protected endpoint with invalid token should fail: got %v want %v", rr.Code, http.StatusUnauthorized)
-	}
+		req, _ = http.NewRequest("GET", "/api/conversations", nil)
+		req.Header.Set("Authorization", "Bearer invalid-token")
+		rr = httptest.NewRecorder()
+		handler.ServeHTTP(rr, req)
+		if rr.Code != http.StatusUnauthorized {
+			t.Errorf("Protected endpoint with invalid token should fail: got %v want %v", rr.Code, http.StatusUnauthorized)
+		}
 	*/
 }

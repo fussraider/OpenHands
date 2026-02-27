@@ -3,86 +3,176 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"openhands-go/server/services"
+	"strconv"
+	"strings"
 )
 
-// Helper types for Github/Git API
-type Repository struct {
-	ID       int64  `json:"id"`
-	FullName string `json:"full_name"`
-	HTMLURL  string `json:"html_url"`
-}
+var GithubService services.IGithubService
 
-type User struct {
-	Login     string `json:"login"`
-	AvatarURL string `json:"avatar_url"`
-}
-
-type Branch struct {
-	Name string `json:"name"`
+func getToken(r *http.Request) string {
+	authHeader := r.Header.Get("Authorization")
+	if strings.HasPrefix(authHeader, "Bearer ") {
+		return strings.TrimPrefix(authHeader, "Bearer ")
+	}
+	return r.Header.Get("X-Github-Token")
 }
 
 func GetUserInstallationsHandler(w http.ResponseWriter, r *http.Request) {
+	token := getToken(r)
+	if token == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	installations, err := GithubService.GetInstallations(r.Context(), token)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	// Mock: return empty list of installations
-	json.NewEncoder(w).Encode([]string{})
+	json.NewEncoder(w).Encode(installations)
 }
 
 func GetUserRepositoriesHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	// Mock: return mock repositories
-	repos := []Repository{
-		{ID: 1, FullName: "openhands/test-repo", HTMLURL: "https://github.com/openhands/test-repo"},
+	token := getToken(r)
+	if token == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
 	}
+
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	perPage, _ := strconv.Atoi(r.URL.Query().Get("per_page"))
+	if perPage < 1 {
+		perPage = 30
+	}
+	sort := r.URL.Query().Get("sort")
+
+	repos, err := GithubService.ListRepositories(r.Context(), token, page, perPage, sort)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(repos)
 }
 
 func GetUserInfoHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	// Mock: return mock user
-	user := User{
-		Login:     "mock-user",
-		AvatarURL: "https://avatars.githubusercontent.com/u/0?v=4",
+	token := getToken(r)
+	if token == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
 	}
+
+	user, err := GithubService.GetUser(r.Context(), token)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(user)
 }
 
 func SearchRepositoriesHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	// Mock: return mock repositories
-	repos := []Repository{
-		{ID: 1, FullName: "openhands/search-result", HTMLURL: "https://github.com/openhands/search-result"},
+	token := getToken(r)
+	if token == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
 	}
+
+	query := r.URL.Query().Get("query")
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	perPage, _ := strconv.Atoi(r.URL.Query().Get("per_page"))
+	sort := r.URL.Query().Get("sort")
+	order := r.URL.Query().Get("order")
+
+	if page < 1 {
+		page = 1
+	}
+	if perPage < 1 {
+		perPage = 10
+	}
+
+	repos, err := GithubService.SearchRepositories(r.Context(), token, query, page, perPage, sort, order)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(repos)
 }
 
 func SearchBranchesHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	// Mock: return mock branches
-	branches := []Branch{
-		{Name: "main"},
-		{Name: "dev"},
+	token := getToken(r)
+	if token == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
 	}
+
+	repository := r.URL.Query().Get("repository") // owner/repo
+	query := r.URL.Query().Get("query")
+
+	parts := strings.Split(repository, "/")
+	if len(parts) != 2 {
+		http.Error(w, "Invalid repository format", http.StatusBadRequest)
+		return
+	}
+	owner, repo := parts[0], parts[1]
+
+	branches, err := GithubService.SearchBranches(r.Context(), token, owner, repo, query)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(branches)
 }
 
 func GetRepositoryBranchesHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	// Mock: return mock branches
-	branches := []Branch{
-		{Name: "main"},
-		{Name: "feature/test"},
+	token := getToken(r)
+	if token == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
 	}
-	// Return as paginated response usually, but for now list
-	// The Python code returns PaginatedBranchesResponse, but let's check what that is.
-	// It probably has a 'data' field or similar.
-	// Let's assume list for now, or match if frontend expects struct.
-	// For this migration, stubbing with list is often safer unless we know struct.
-	// Looking at Python `PaginatedBranchesResponse` it likely wraps list.
-	// Let's return list for `search/branches` (list[Branch]) but what about this one?
-	// The Python signature says `PaginatedBranchesResponse`.
-	// We'll stub with a simple map for now.
-	json.NewEncoder(w).Encode(map[string]interface{}{
+
+	repository := r.URL.Query().Get("repository")
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	perPage, _ := strconv.Atoi(r.URL.Query().Get("per_page"))
+
+	if page < 1 {
+		page = 1
+	}
+	if perPage < 1 {
+		perPage = 30
+	}
+
+	parts := strings.Split(repository, "/")
+	if len(parts) != 2 {
+		http.Error(w, "Invalid repository format", http.StatusBadRequest)
+		return
+	}
+	owner, repo := parts[0], parts[1]
+
+	branches, err := GithubService.GetBranches(r.Context(), token, owner, repo, page, perPage)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Python expects PaginatedBranchesResponse
+	response := map[string]interface{}{
 		"data": branches,
-		"meta": map[string]interface{}{"total": 2},
-	})
+		// "meta": ...
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
