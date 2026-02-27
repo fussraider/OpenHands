@@ -5,10 +5,10 @@ It aims to provide better performance, easier deployment, and stronger type safe
 
 ## Status
 
-**Current State:** 🚧 Beta / Feature Complete
+**Current State:** ✅ Release Candidate (v1.0 Ready)
 
-This backend implements the core API structure, serves the frontend static files, and includes a fully functional autonomous agent loop.
-It supports stateful shell sessions, agent delegation, plugin system, and GitHub integration.
+The Go backend has reached functional parity with the Python implementation for all core OpenHands features.
+It supports stateful shell sessions, agent delegation, plugin system, GitHub integration, security analysis, loop detection, and observability.
 
 **License Note:** This implementation strictly follows the MIT-licensed open-source codebase. Features located in the `enterprise/` directory (under PolyForm Free Trial License) are **out of scope** and not implemented here.
 
@@ -49,8 +49,8 @@ The following REST API endpoints are implemented:
 | POST | `/api/secrets` | Add secret | ✅ Full |
 | GET | `/api/github/repositories` | List GitHub repos | ✅ Full |
 | GET | `/api/conversations/{id}/trajectory` | Get session history | ✅ Full |
-| POST | `/api/conversations/{id}/feedback` | Submit feedback | 🚧 Stub |
-| GET | `/mcp/` | Model Context Protocol | 🚧 Stub |
+| POST | `/api/conversations/{id}/feedback` | Submit feedback | ✅ Full |
+| GET | `/mcp/` | Model Context Protocol | 🚧 Stub (Client implemented) |
 
 ## How to Run
 
