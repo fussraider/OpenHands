@@ -92,7 +92,11 @@ func main() {
 	mux.HandleFunc("/", handlers.SPAHandler(staticDir))
 
 	// Wrap with middleware
+	rateLimiter := middleware.NewRateLimiter(2, 1, 1) // 2 req/s, sleep 1s on burst
+
 	handler := middleware.AuthMiddleware(mux)
+	handler = middleware.CacheControlMiddleware(handler)
+	handler = middleware.RateLimitMiddleware(rateLimiter)(handler)
 
 	host := config.AppConfig.Server.Host
 	if host == "" {

@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"openhands-go/server/config"
 	"openhands-go/server/microagent"
 )
