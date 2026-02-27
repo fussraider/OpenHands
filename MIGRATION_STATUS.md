@@ -42,6 +42,16 @@ This file tracks the migration status of OpenHands backend features from Python 
 | **Events** | **Task Tracking** | `openhands/events/observation/task_tracking.py` | ✅ Complete | Implemented `TaskTrackingObservation` and support in `EventStream`. |
 | **Events** | **Loop Recovery** | `openhands/events/observation/loop_recovery.py` | ✅ Complete | Implemented `LoopDetector` and integrated into Agent loop. |
 
+## Pending Features
+
+The following features exist in the Python codebase but are **pending migration** to Go. These represent the gap between "Beta/Feature Complete" and "Full Parity".
+
+| Area | Feature | Python Source | Complexity | Notes |
+|---|---|---|---|---|
+| **CLI** | **Command Line Mode** | `openhands/core/main.py` | Medium | Headless execution of the agent loop via CLI. |
+| **Workflows** | **Issue Resolver** | `openhands/resolver/` | High | Automated pipeline for resolving GitHub issues into PRs. |
+| **API** | **Git Provider Secrets** | `openhands/server/routes/secrets.py` | Low | Dedicated endpoints (`/add-git-providers`, `/unset-provider-tokens`) required by the frontend settings. |
+
 ## Do Not Implement
 
 | Area | Feature | Python Reference | Reason |
