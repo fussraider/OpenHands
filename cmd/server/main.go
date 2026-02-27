@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 	"openhands-go/server/handlers"
 	"openhands-go/server/logger"
 	"openhands-go/server/middleware"
+	"openhands-go/server/observability"
 	"openhands-go/server/ws"
 )
 
@@ -18,6 +20,13 @@ func main() {
 		slog.Error("Failed to load config", "error", err)
 		panic(err)
 	}
+
+	// Initialize Tracing
+	if err := observability.InitTracer(); err != nil {
+		slog.Error("Failed to init tracer", "error", err)
+		// Don't panic, continue without tracing
+	}
+	defer observability.Shutdown(context.Background())
 
 	handlers.InitHandlers()
 
