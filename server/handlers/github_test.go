@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"openhands-go/server/microagent"
 	"testing"
 
 	"github.com/google/go-github/v60/github"
@@ -32,6 +33,18 @@ func (m *MockGithubService) GetInstallations(ctx context.Context, token string) 
 }
 func (m *MockGithubService) GetSuggestedTasks(ctx context.Context, token string) ([]interface{}, error) {
 	return []interface{}{}, nil
+}
+func (m *MockGithubService) GetFileContent(ctx context.Context, token, owner, repo, path string) (string, error) {
+	return "mock content", nil
+}
+func (m *MockGithubService) ListDirectory(ctx context.Context, token, owner, repo, path string) ([]*github.RepositoryContent, error) {
+	return []*github.RepositoryContent{}, nil
+}
+func (m *MockGithubService) GetMicroagents(ctx context.Context, token, owner, repo string) ([]microagent.MicroagentResponse, error) {
+	return []microagent.MicroagentResponse{}, nil
+}
+func (m *MockGithubService) GetMicroagentContent(ctx context.Context, token, owner, repo, path string) (*microagent.MicroagentContentResponse, error) {
+	return &microagent.MicroagentContentResponse{Content: "mock"}, nil
 }
 
 func init() {
@@ -99,5 +112,25 @@ func TestGithubHandlers(t *testing.T) {
 	http.HandlerFunc(SearchBranchesHandler).ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
 		t.Errorf("SearchBranchesHandler returned wrong status code: got %v want %v", rr.Code, http.StatusOK)
+	}
+
+	// Test Microagent Handlers
+	req, _ = http.NewRequest("GET", "/api/user/repository/owner/repo/microagents", nil)
+	req.Header.Set("Authorization", tokenHeader)
+	req.SetPathValue("repository_name", "owner/repo")
+
+	rr = httptest.NewRecorder()
+	http.HandlerFunc(GetRepositoryMicroagentsHandler).ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Errorf("GetRepositoryMicroagentsHandler returned wrong status code: got %v want %v", rr.Code, http.StatusOK)
+	}
+
+	req, _ = http.NewRequest("GET", "/api/user/repository/owner/repo/microagents/content?file_path=agent.md", nil)
+	req.Header.Set("Authorization", tokenHeader)
+	req.SetPathValue("repository_name", "owner/repo")
+	rr = httptest.NewRecorder()
+	http.HandlerFunc(GetRepositoryMicroagentContentHandler).ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Errorf("GetRepositoryMicroagentContentHandler returned wrong status code: got %v want %v", rr.Code, http.StatusOK)
 	}
 }

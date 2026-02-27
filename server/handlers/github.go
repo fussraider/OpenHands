@@ -176,3 +176,67 @@ func GetRepositoryBranchesHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
+
+func GetRepositoryMicroagentsHandler(w http.ResponseWriter, r *http.Request) {
+	token := getToken(r)
+	if token == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	repository := r.PathValue("repository_name")
+	if repository == "" {
+		// Try to get from query or assume path handling issue?
+		// Since we use {repository_name} in mux, it should be there.
+		// However, repository_name might contain slashes "owner/repo".
+		// Go 1.22 mux with {repository_name...} supports slashes.
+	}
+
+	parts := strings.Split(repository, "/")
+	if len(parts) != 2 {
+		http.Error(w, "Invalid repository format", http.StatusBadRequest)
+		return
+	}
+	owner, repo := parts[0], parts[1]
+
+	microagents, err := GithubService.GetMicroagents(r.Context(), token, owner, repo)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(microagents)
+}
+
+func GetRepositoryMicroagentContentHandler(w http.ResponseWriter, r *http.Request) {
+	token := getToken(r)
+	if token == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	repository := r.PathValue("repository_name")
+	filePath := r.URL.Query().Get("file_path")
+
+	if filePath == "" {
+		http.Error(w, "file_path parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	parts := strings.Split(repository, "/")
+	if len(parts) != 2 {
+		http.Error(w, "Invalid repository format", http.StatusBadRequest)
+		return
+	}
+	owner, repo := parts[0], parts[1]
+
+	content, err := GithubService.GetMicroagentContent(r.Context(), token, owner, repo, filePath)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(content)
+}
