@@ -35,8 +35,8 @@ The following features exist in the Python codebase but are **pending migration*
 | **Agents** | **Other Agents** | `openhands/agenthub/` | ✅ Complete | Ported `BrowsingAgent` in `server/agent/browsing_agent.go`. |
 | **Security** | **Analyzer** | `openhands/security/analyzer.py` | ✅ Complete | Implemented `BasicAnalyzer` blocking high-risk commands. |
 | **Memory** | **Condenser** | `openhands/memory/condenser/` | ✅ Complete | Implemented `TokenCondenser` and `NoOpCondenser` with integration into `Agent`. |
-| **Observability** | **Tracing** | `openhands/core/logger.py` | ✅ Complete | Implemented OpenTelemetry tracing in `server/observability` and instrumented `Agent`. |
-| **Runtime** | **Jupyter Kernel** | `openhands/runtime/plugins/jupyter/` | 🚧 In Progress | Enhanced `JupyterPlugin` with simpler execution model; Statefulness planned via file pickling or background server. |
+| **MCP** | **Full Client Impl** | `openhands/mcp/` | ✅ Complete | Implemented robust `Stdio` transport in `server/mcp/client.go` using `os/exec`. |
+| **Runtime** | **Jupyter Kernel** | `openhands/runtime/plugins/jupyter/` | ✅ Complete | Implemented stateful execution via pickle persistence in `JupyterPlugin`. |
 | **Events** | **Task Tracking** | `openhands/events/observation/task_tracking.py` | ✅ Complete | Implemented `TaskTrackingObservation` and support in `EventStream`. |
 | **Events** | **Loop Recovery** | `openhands/events/observation/loop_recovery.py` | ✅ Complete | Implemented `LoopDetector` and integrated into Agent loop. |
 
