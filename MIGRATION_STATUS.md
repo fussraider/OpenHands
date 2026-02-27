@@ -30,6 +30,7 @@ This file tracks the migration status of OpenHands backend features from Python 
 | Area | Feature | Python Reference | Complexity | Notes |
 |---|---|---|---|---|
 | **Skills** | **Microagents** | `openhands/server/routes/git.py` | ✅ Complete | APIs for discovering and fetching microagents from Git repositories implemented in `server/services/github.go`. |
+| **Agents** | **Delegation** | `openhands/core/agent/agent.py` | ✅ Complete | Implemented `Delegator` in `RuntimeManager` and `RunUntilDone` in `Agent` to support sub-agents. |
 | **MCP** | **Full Client Impl** | `openhands/mcp/` | ✅ Complete | Implemented robust `Stdio` transport in `server/mcp/client.go` using `os/exec`. |
 | **Agents** | **Other Agents** | `openhands/agenthub/` | ✅ Complete | Ported `BrowsingAgent` in `server/agent/browsing_agent.go`. |
 | **Security** | **Analyzer** | `openhands/security/analyzer.py` | ✅ Complete | Implemented `BasicAnalyzer` blocking high-risk commands. |
@@ -44,7 +45,6 @@ The following features exist in the Python codebase but are **pending migration*
 
 | Area | Feature | Python Source | Complexity | Notes |
 |---|---|---|---|---|
-| **Agents** | **Delegation** | `openhands/core/agent/agent.py` (delegation logic), `openhands/server/routes/manage_conversations.py` (spawning sub-conversations) | High | Implementation of the `Delegator` interface to support sub-agents. |
 | **Security** | **Advanced Analyzer** | `openhands/security/llm/analyzer.py` | High | LLM-based security analysis (`LLMRiskAnalyzer`). |
 | **Integrations** | **Git Providers** | `openhands/integrations/` (provider implementations) | Medium | Support for non-GitHub providers (GitLab, Bitbucket, Azure DevOps). |
 | **Config** | **LLM Config** | `openhands/core/config/llm_config.py` | Low | Richer configuration options (retries, timeouts). |
