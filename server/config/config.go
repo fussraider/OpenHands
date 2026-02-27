@@ -22,6 +22,12 @@ type Config struct {
 	Sandbox       SandboxConfig `toml:"sandbox"`
 	Server        ServerConfig  `toml:"server"`
 	Github        GithubConfig  `toml:"github"`
+	Security      SecurityConfig `toml:"security"`
+}
+
+type SecurityConfig struct {
+	SecurityAnalyzer string `toml:"security_analyzer"` // "llm" or "invariant"
+	ConfirmationMode bool   `toml:"confirmation_mode"`
 }
 
 type LLMConfig struct {

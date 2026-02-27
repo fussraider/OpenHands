@@ -29,6 +29,7 @@ This file tracks the migration status of OpenHands backend features from Python 
 
 | Area | Feature | Python Reference | Complexity | Notes |
 |---|---|---|---|---|
+| **Security** | **Advanced Analyzer** | `openhands/security/llm/analyzer.py` | ✅ Complete | Implemented `LLMSecurityAnalyzer` that actively queries LLM for risk assessment of commands. |
 | **Skills** | **Microagents** | `openhands/server/routes/git.py` | ✅ Complete | APIs for discovering and fetching microagents from Git repositories implemented in `server/services/github.go`. |
 | **Agents** | **Delegation** | `openhands/core/agent/agent.py` | ✅ Complete | Implemented `Delegator` in `RuntimeManager` and `RunUntilDone` in `Agent` to support sub-agents. |
 | **MCP** | **Full Client Impl** | `openhands/mcp/` | ✅ Complete | Implemented robust `Stdio` transport in `server/mcp/client.go` using `os/exec`. |
@@ -45,7 +46,6 @@ The following features exist in the Python codebase but are **pending migration*
 
 | Area | Feature | Python Source | Complexity | Notes |
 |---|---|---|---|---|
-| **Security** | **Advanced Analyzer** | `openhands/security/llm/analyzer.py` | High | LLM-based security analysis (`LLMRiskAnalyzer`). |
 | **Integrations** | **Git Providers** | `openhands/integrations/` (provider implementations) | Medium | Support for non-GitHub providers (GitLab, Bitbucket, Azure DevOps). |
 | **Config** | **LLM Config** | `openhands/core/config/llm_config.py` | Low | Richer configuration options (retries, timeouts). |
 

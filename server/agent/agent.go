@@ -67,6 +67,15 @@ func NewAgent(id, conversationID string, llmService *llm.LLMService, rt runtime.
 		Security:       security.NewBasicAnalyzer(),
 	}
 
+	// Initialize Security Analyzer
+	// If LLM config supports it, use LLM analyzer.
+	// For now, if "EnableSecurityAnalyzer" is true in config, and we have LLM service, we use it?
+	// But `security.NewBasicAnalyzer` is default.
+	// Let's check config.
+	if cfg.Security.SecurityAnalyzer == "llm" {
+		agent.Security = security.NewLLMSecurityAnalyzer(llmService)
+	}
+
 	// Initialize Condenser
 	if cfg.Agent.EnableHistoryTruncation {
 		agent.Condenser = memory.NewTokenCondenser(cfg.Agent.MaxEvents)
