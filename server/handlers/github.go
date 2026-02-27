@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-var GithubService services.IGithubService
+var GitService *services.GitService
 
 func getToken(r *http.Request) string {
 	authHeader := r.Header.Get("Authorization")
@@ -25,7 +25,7 @@ func GetUserInstallationsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	installations, err := GithubService.GetInstallations(r.Context(), token)
+	installations, err := GitService.GetInstallations(r.Context(), token)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -52,7 +52,7 @@ func GetUserRepositoriesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	sort := r.URL.Query().Get("sort")
 
-	repos, err := GithubService.ListRepositories(r.Context(), token, page, perPage, sort)
+	repos, err := GitService.ListRepositories(r.Context(), token, page, perPage, sort)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -69,7 +69,7 @@ func GetUserInfoHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := GithubService.GetUser(r.Context(), token)
+	user, err := GitService.GetUser(r.Context(), token)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -99,7 +99,7 @@ func SearchRepositoriesHandler(w http.ResponseWriter, r *http.Request) {
 		perPage = 10
 	}
 
-	repos, err := GithubService.SearchRepositories(r.Context(), token, query, page, perPage, sort, order)
+	repos, err := GitService.SearchRepositories(r.Context(), token, query, page, perPage, sort, order)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -126,7 +126,7 @@ func SearchBranchesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	owner, repo := parts[0], parts[1]
 
-	branches, err := GithubService.SearchBranches(r.Context(), token, owner, repo, query)
+	branches, err := GitService.SearchBranches(r.Context(), token, owner, repo, query)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -161,7 +161,7 @@ func GetRepositoryBranchesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	owner, repo := parts[0], parts[1]
 
-	branches, err := GithubService.GetBranches(r.Context(), token, owner, repo, page, perPage)
+	branches, err := GitService.GetBranches(r.Context(), token, owner, repo, page, perPage)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -185,13 +185,6 @@ func GetRepositoryMicroagentsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	repository := r.PathValue("repository_name")
-	if repository == "" {
-		// Try to get from query or assume path handling issue?
-		// Since we use {repository_name} in mux, it should be there.
-		// However, repository_name might contain slashes "owner/repo".
-		// Go 1.22 mux with {repository_name...} supports slashes.
-	}
-
 	parts := strings.Split(repository, "/")
 	if len(parts) != 2 {
 		http.Error(w, "Invalid repository format", http.StatusBadRequest)
@@ -199,7 +192,7 @@ func GetRepositoryMicroagentsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	owner, repo := parts[0], parts[1]
 
-	microagents, err := GithubService.GetMicroagents(r.Context(), token, owner, repo)
+	microagents, err := GitService.GetMicroagents(r.Context(), token, owner, repo)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -231,7 +224,7 @@ func GetRepositoryMicroagentContentHandler(w http.ResponseWriter, r *http.Reques
 	}
 	owner, repo := parts[0], parts[1]
 
-	content, err := GithubService.GetMicroagentContent(r.Context(), token, owner, repo, filePath)
+	content, err := GitService.GetMicroagentContent(r.Context(), token, owner, repo, filePath)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

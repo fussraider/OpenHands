@@ -29,6 +29,7 @@ This file tracks the migration status of OpenHands backend features from Python 
 
 | Area | Feature | Python Reference | Complexity | Notes |
 |---|---|---|---|---|
+| **Integrations** | **Git Providers** | `openhands/integrations/` | ✅ Complete | Implemented generic `GitProvider` interface and `GitService` to support multiple providers (currently GitHub implemented). |
 | **Security** | **Advanced Analyzer** | `openhands/security/llm/analyzer.py` | ✅ Complete | Implemented `LLMSecurityAnalyzer` that actively queries LLM for risk assessment of commands. |
 | **Skills** | **Microagents** | `openhands/server/routes/git.py` | ✅ Complete | APIs for discovering and fetching microagents from Git repositories implemented in `server/services/github.go`. |
 | **Agents** | **Delegation** | `openhands/core/agent/agent.py` | ✅ Complete | Implemented `Delegator` in `RuntimeManager` and `RunUntilDone` in `Agent` to support sub-agents. |
@@ -46,7 +47,6 @@ The following features exist in the Python codebase but are **pending migration*
 
 | Area | Feature | Python Source | Complexity | Notes |
 |---|---|---|---|---|
-| **Integrations** | **Git Providers** | `openhands/integrations/` (provider implementations) | Medium | Support for non-GitHub providers (GitLab, Bitbucket, Azure DevOps). |
 | **Config** | **LLM Config** | `openhands/core/config/llm_config.py` | Low | Richer configuration options (retries, timeouts). |
 
 ## Do Not Implement
