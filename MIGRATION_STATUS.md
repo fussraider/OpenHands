@@ -33,10 +33,10 @@ The following features exist in the Python codebase but are **pending migration*
 |---|---|---|---|---|
 | **MCP** | **Full Client Impl** | `openhands/mcp/` | High | Full implementation of Model Context Protocol client to interact with MCP servers. |
 | **Agents** | **Other Agents** | `openhands/agenthub/` | Medium | Porting `BrowsingAgent`, `VisualBrowsingAgent`, `LocAgent`. |
-| **Security** | **Analyzer** | `openhands/security/analyzer.py` | High | Prompt injection detection and safety checks. |
+| **Security** | **Analyzer** | `openhands/security/analyzer.py` | ✅ Complete | Implemented `BasicAnalyzer` blocking high-risk commands. |
 | **Memory** | **Condenser** | `openhands/memory/condenser/` | ✅ Complete | Implemented `TokenCondenser` and `NoOpCondenser` with integration into `Agent`. |
 | **Observability** | **Tracing** | `openhands/core/logger.py` | ✅ Complete | Implemented OpenTelemetry tracing in `server/observability` and instrumented `Agent`. |
-| **Runtime** | **Jupyter Kernel** | `openhands/runtime/plugins/jupyter/` | High | Python implementation uses real Jupyter kernels via `jupyter_client`. Go implementation currently uses `python3 -c` MVP. |
+| **Runtime** | **Jupyter Kernel** | `openhands/runtime/plugins/jupyter/` | 🚧 In Progress | Enhanced `JupyterPlugin` with simpler execution model; Statefulness planned via file pickling or background server. |
 | **Events** | **Task Tracking** | `openhands/events/observation/task_tracking.py` | ✅ Complete | Implemented `TaskTrackingObservation` and support in `EventStream`. |
 | **Events** | **Loop Recovery** | `openhands/events/observation/loop_recovery.py` | ✅ Complete | Implemented `LoopDetector` and integrated into Agent loop. |
 

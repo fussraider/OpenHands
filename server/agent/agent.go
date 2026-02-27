@@ -13,6 +13,7 @@ import (
 	"openhands-go/server/models"
 	"openhands-go/server/runtime"
 	"openhands-go/server/runtime/plugins"
+	"openhands-go/server/security"
 	"openhands-go/server/runtime/plugins/browser"
 	"openhands-go/server/runtime/plugins/jupyter"
 	"time"
@@ -36,6 +37,7 @@ type Agent struct {
 	Config         *config.Config
 	LoopDetector   *LoopDetector
 	Condenser      memory.Condenser
+	Security       security.SecurityAnalyzer
 }
 
 func NewAgent(id, conversationID string, llmService *llm.LLMService, rt runtime.Runtime, es *events.EventStream, delegator Delegator, cfg *config.Config) *Agent {
@@ -62,6 +64,7 @@ func NewAgent(id, conversationID string, llmService *llm.LLMService, rt runtime.
 		PromptManager:  pm,
 		Config:         cfg,
 		LoopDetector:   NewLoopDetector(),
+		Security:       security.NewBasicAnalyzer(),
 	}
 
 	// Initialize Condenser
@@ -232,12 +235,21 @@ func (a *Agent) Step(ctx context.Context) error {
 					continue
 				}
 
-				a.recordAction(models.CmdRunAction{
+				cmdAction := models.CmdRunAction{
 					Action:     models.ActionTypeCmdRun,
 					Command:    args.Command,
 					Thought:    args.Thought,
 					ToolCallID: tc.ID,
-				})
+				}
+				a.recordAction(cmdAction)
+
+				// Security Check
+				risk, reason, _ := a.Security.Analyze(ctx, cmdAction)
+				if risk == security.RiskHigh {
+					// Block high risk actions for now (or require confirmation if we had UI support)
+					a.recordObservation(tc.ID, fmt.Sprintf("Security Alert: Action blocked. Reason: %s", reason), "error")
+					continue
+				}
 
 				output, exitCode, err := a.Runtime.Execute(ctx, "bash", "-c", args.Command)
 				content := output
