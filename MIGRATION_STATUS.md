@@ -29,6 +29,7 @@ This file tracks the migration status of OpenHands backend features from Python 
 
 | Area | Feature | Python Reference | Complexity | Notes |
 |---|---|---|---|---|
+| **Config** | **LLM Config** | `openhands/core/config/llm_config.py` | ✅ Complete | Implemented richer configuration options (Temperature, TopP, MaxOutputTokens) in `LLMConfig` and integrated with `LLMService`. |
 | **Integrations** | **Git Providers** | `openhands/integrations/` | ✅ Complete | Implemented generic `GitProvider` interface and `GitService` to support multiple providers (currently GitHub implemented). |
 | **Security** | **Advanced Analyzer** | `openhands/security/llm/analyzer.py` | ✅ Complete | Implemented `LLMSecurityAnalyzer` that actively queries LLM for risk assessment of commands. |
 | **Skills** | **Microagents** | `openhands/server/routes/git.py` | ✅ Complete | APIs for discovering and fetching microagents from Git repositories implemented in `server/services/github.go`. |
@@ -40,14 +41,6 @@ This file tracks the migration status of OpenHands backend features from Python 
 | **Runtime** | **Jupyter Kernel** | `openhands/runtime/plugins/jupyter/` | ✅ Complete | Implemented stateful execution via pickle persistence in `JupyterPlugin`. |
 | **Events** | **Task Tracking** | `openhands/events/observation/task_tracking.py` | ✅ Complete | Implemented `TaskTrackingObservation` and support in `EventStream`. |
 | **Events** | **Loop Recovery** | `openhands/events/observation/loop_recovery.py` | ✅ Complete | Implemented `LoopDetector` and integrated into Agent loop. |
-
-## Pending Features
-
-The following features exist in the Python codebase but are **pending migration** to Go. These represent the gap between "Beta/Feature Complete" and "Full Parity".
-
-| Area | Feature | Python Source | Complexity | Notes |
-|---|---|---|---|---|
-| **Config** | **LLM Config** | `openhands/core/config/llm_config.py` | Low | Richer configuration options (retries, timeouts). |
 
 ## Do Not Implement
 

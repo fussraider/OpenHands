@@ -31,9 +31,16 @@ type SecurityConfig struct {
 }
 
 type LLMConfig struct {
-	Model   string `toml:"model"`
-	APIKey  string `toml:"api_key"`
-	BaseURL string `toml:"base_url"`
+	Model             string  `toml:"model"`
+	APIKey            string  `toml:"api_key"`
+	BaseURL           string  `toml:"base_url"`
+	NumRetries        int     `toml:"num_retries"`
+	Timeout           int     `toml:"timeout"`
+	Temperature       float64 `toml:"temperature"`
+	TopP              float64 `toml:"top_p"`
+	MaxInputTokens    int     `toml:"max_input_tokens"`
+	MaxOutputTokens   int     `toml:"max_output_tokens"`
+	CustomLLMProvider string  `toml:"custom_llm_provider"`
 }
 
 type AgentConfig struct {
@@ -101,6 +108,21 @@ func LoadConfig() error {
 	}
 	if llmBaseURL := os.Getenv("LLM_BASE_URL"); llmBaseURL != "" {
 		AppConfig.LLM.BaseURL = llmBaseURL
+	}
+	if numRetries := os.Getenv("LLM_NUM_RETRIES"); numRetries != "" {
+		if n, err := strconv.Atoi(numRetries); err == nil {
+			AppConfig.LLM.NumRetries = n
+		}
+	}
+	if timeout := os.Getenv("LLM_TIMEOUT"); timeout != "" {
+		if n, err := strconv.Atoi(timeout); err == nil {
+			AppConfig.LLM.Timeout = n
+		}
+	}
+	if temperature := os.Getenv("LLM_TEMPERATURE"); temperature != "" {
+		if f, err := strconv.ParseFloat(temperature, 64); err == nil {
+			AppConfig.LLM.Temperature = f
+		}
 	}
 	if sandboxRuntime := os.Getenv("SANDBOX_RUNTIME"); sandboxRuntime != "" {
 		AppConfig.Sandbox.Runtime = sandboxRuntime

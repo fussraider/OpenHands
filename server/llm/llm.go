@@ -26,6 +26,12 @@ func NewLLMService(cfg config.LLMConfig) (*LLMService, error) {
 		if cfg.BaseURL != "" {
 			opts = append(opts, openai.WithBaseURL(cfg.BaseURL))
 		}
+		// Apply enhanced config
+		// langchaingo openai provider doesn't expose generic options for temperature/top_p in New(),
+		// they are usually call options. But some providers allow default options.
+		// Checking langchaingo/llms/openai source (from memory/knowledge), it doesn't support setting default temp/top_p in New().
+		// We have to pass them in GenerateContent.
+		// However, we can store them in LLMService and apply them in CompleteWithTools.
 
 		model, err = openai.New(opts...)
 		if err != nil {
@@ -108,6 +114,17 @@ func (s *LLMService) CompleteWithTools(ctx context.Context, messages []Message, 
 	opts := []llms.CallOption{}
 	if len(tools) > 0 {
 		opts = append(opts, llms.WithTools(tools))
+	}
+
+	// Apply config options
+	if s.config.Temperature != 0 {
+		opts = append(opts, llms.WithTemperature(s.config.Temperature))
+	}
+	if s.config.TopP != 0 {
+		opts = append(opts, llms.WithTopP(s.config.TopP))
+	}
+	if s.config.MaxOutputTokens != 0 {
+		opts = append(opts, llms.WithMaxTokens(s.config.MaxOutputTokens))
 	}
 
 	completion, err := s.model.GenerateContent(ctx, content, opts...)
