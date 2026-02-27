@@ -22,6 +22,6 @@ func GetAgentsHandler(w http.ResponseWriter, r *http.Request) {
 func GetSecurityAnalyzersHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	// Return mock security analyzers
-	analyzers := []string{"mitmproxy"}
+	analyzers := []string{"mitmproxy", "llm", "invariant"}
 	json.NewEncoder(w).Encode(analyzers)
 }

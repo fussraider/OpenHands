@@ -50,7 +50,9 @@ The following features exist in the Python codebase but are **pending migration*
 |---|---|---|---|---|
 | **CLI** | **Command Line Mode** | `openhands/core/main.py` | Medium | Headless execution of the agent loop via CLI. |
 | **Workflows** | **Issue Resolver** | `openhands/resolver/` | High | Automated pipeline for resolving GitHub issues into PRs. |
-| **API** | **Git Provider Secrets** | `openhands/server/routes/secrets.py` | Low | Dedicated endpoints (`/add-git-providers`, `/unset-provider-tokens`) required by the frontend settings. |
+| **Memory** | **Advanced Condensers** | `openhands/memory/condenser/impl/` | High | `LLMSummarizingCondenser`, `ObservationMaskingCondenser`, `AmortizedForgettingCondenser`, and `CondenserPipeline`. |
+| **API** | **Public Options (Dynamic)** | `openhands/server/routes/public.py` | Low | Dynamic fetching of supported models/agents for `/api/options/*` (currently mocked). |
+| **Server** | **Rate Limiter & Cache Control** | `openhands/server/middleware.py` | Low | `RateLimitMiddleware` and `CacheControlMiddleware` are missing. |
 
 ## Do Not Implement
 
