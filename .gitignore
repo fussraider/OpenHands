@@ -267,3 +267,7 @@ main
 settings.json
 conversations.json
 server.log
+
+# go build binaries
+server
+cli
