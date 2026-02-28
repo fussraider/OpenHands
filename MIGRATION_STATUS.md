@@ -52,6 +52,9 @@ The following features exist in the Python codebase but are **pending migration*
 | **API** | **Public Options (Dynamic)** | `openhands/server/routes/public.py` | High | Low | Dynamic fetching of supported models/agents/security analyzers for `/api/options/*` (currently mocked in `server/handlers/options.go`). Required for full frontend feature parity. |
 | **Integrations** | **MCP Integration** | `openhands/server/routes/mcp.py` | High | Medium | Currently a stub implementation returning 501 Not Implemented in `server/handlers/mcp.go`. |
 | **API** | **Security API** | `openhands/server/routes/security.py` | High | Medium | Currently a stub implementation returning 501 Not Implemented in `server/handlers/security.go`. |
+| **API** | **Manage Conversations API** | `openhands/server/routes/manage_conversations.py` | Medium | Medium | Missing `/microagent-management/conversations` endpoint in Go backend. |
+| **Agents** | **Additional Agents** | `openhands/agenthub/` | Low | High | `readonly_agent`, `visualbrowsing_agent`, `dummy_agent` missing from `server/agent/`. |
+| **Plugins** | **Additional Plugins** | `openhands/runtime/plugins/` | Medium | Medium | `agent_skills` and `vscode` plugins missing from `server/runtime/plugins/`. |
 
 ## Plan for myself
 
