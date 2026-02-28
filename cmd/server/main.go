@@ -45,6 +45,8 @@ func main() {
 	mux.HandleFunc("GET /api/options/agents", handlers.GetAgentsHandler)
 	mux.HandleFunc("GET /api/options/security-analyzers", handlers.GetSecurityAnalyzersHandler)
 
+	mux.HandleFunc("GET /api/microagent-management/conversations", handlers.GetMicroagentManagementConversationsHandler)
+
 	mux.HandleFunc("GET /api/conversations", handlers.SearchConversationsHandler)
 	mux.HandleFunc("POST /api/conversations", handlers.NewConversationHandler)
 	mux.HandleFunc("GET /api/conversations/{id}", handlers.GetConversationHandler)
