@@ -85,6 +85,8 @@ func main() {
 	// MCP Mount
 	mux.HandleFunc("/mcp/", handlers.MCPSSEHandler)
 
+	handlers.RegisterV1Routes(mux)
+
 	mux.HandleFunc("GET /health", handlers.HealthHandler)
 	mux.HandleFunc("GET /alive", handlers.HealthHandler)
 

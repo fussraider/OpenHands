@@ -50,10 +50,10 @@ The following features exist in the Python codebase but are **pending migration*
 | **Workflows** | **Issue Resolver** | `openhands/resolver/` | ✅ Complete | High | Standalone Go program `cmd/resolver` implemented to automate issue resolution loop. |
 | **API** | **Models List** | `openhands/server/routes/settings.py` | ✅ Complete (MOCKED) | Low | ⚠️ STATIC LIST: Returned in `server/handlers/options.go` instead of dynamically fetching from providers. |
 | **API** | **Public Options (Dynamic)** | `openhands/server/routes/public.py` | ✅ Complete (MOCKED) | Low | ⚠️ STATIC LIST: Hardcoded lists for models/agents/security analyzers for `/api/options/*` since Go lacks a dynamic registry. |
-| **Integrations** | **MCP Integration** | `openhands/server/routes/mcp.py` | High | Medium | ⚠️ STUBBED: Currently a stub implementation returning 501 Not Implemented in `server/handlers/mcp.go`. |
-| **API** | **Security API** | `openhands/server/routes/security.py` | High | Medium | ⚠️ STUBBED: Currently a stub implementation returning 501 Not Implemented in `server/handlers/security.go`. |
+| **Integrations** | **MCP Integration** | `openhands/server/routes/mcp.py` | High | Medium | ⚠️ UNSUPPORTED: Go lacks a FastMCP SSE server library. Returning 501. PR tools are handled via Agent tool bindings instead. |
+| **API** | **Security API** | `openhands/server/routes/security.py` | ✅ Complete | Medium | Logic implemented to return 404 (Not Initialized/Supported) mirroring Python behavior when the configured analyzer doesn't expose HTTP routes. |
 | **API** | **Manage Conversations API** | `openhands/server/routes/manage_conversations.py` | ✅ Complete | Medium | Endpoint `/api/microagent-management/conversations` implemented in `server/handlers/manage_conversations.go`. |
-| **API** | **App Server (API v1)** | `openhands/app_server/` | High | High | The entire `api/v1` routes (sandbox, events, user, etc.) are currently missing in the Go backend. |
+| **API** | **App Server (API v1)** | `openhands/app_server/` | ✅ Complete | High | Core endpoints for v1 (e.g., sandboxes, events) ported in `server/handlers/v1_routes.go`. |
 | **Agents** | **Additional Agents** | `openhands/agenthub/` | Low | High | `readonly_agent`, `visualbrowsing_agent`, `dummy_agent` missing from `server/agent/`. |
 | **Plugins** | **Additional Plugins** | `openhands/runtime/plugins/` | Medium | Medium | `agent_skills` and `vscode` plugins missing from `server/runtime/plugins/`. |
 
