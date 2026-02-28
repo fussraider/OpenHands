@@ -67,6 +67,15 @@ func NewAgent(id, conversationID string, llmService *llm.LLMService, rt runtime.
 		Security:       security.NewBasicAnalyzer(),
 	}
 
+	// Initialize Security Analyzer
+	// If LLM config supports it, use LLM analyzer.
+	// For now, if "EnableSecurityAnalyzer" is true in config, and we have LLM service, we use it?
+	// But `security.NewBasicAnalyzer` is default.
+	// Let's check config.
+	if cfg.Security.SecurityAnalyzer == "llm" {
+		agent.Security = security.NewLLMSecurityAnalyzer(llmService)
+	}
+
 	// Initialize Condenser
 	if cfg.Agent.EnableHistoryTruncation {
 		agent.Condenser = memory.NewTokenCondenser(cfg.Agent.MaxEvents)
@@ -503,11 +512,8 @@ func (a *Agent) eventsToMessages(ctx context.Context, evts []events.Event) []llm
 
 func (a *Agent) RunLoop(ctx context.Context) {
 	slog.Info("Starting CodeAct agent loop", "conversation_id", a.ConversationID)
-	// Init plugins
-	for _, p := range a.Plugins {
-		if err := p.Init(ctx, a.Runtime); err != nil {
-			slog.Error("Failed to init plugin", "plugin", p.Name(), "error", err)
-		}
+	if err := a.InitPlugins(ctx); err != nil {
+		slog.Error("Failed to init plugins", "error", err)
 	}
 
 	for {
@@ -521,6 +527,52 @@ func (a *Agent) RunLoop(ctx context.Context) {
 				time.Sleep(5 * time.Second) // Backoff
 			}
 			time.Sleep(1 * time.Second) // Pace
+		}
+	}
+}
+
+func (a *Agent) InitPlugins(ctx context.Context) error {
+	for _, p := range a.Plugins {
+		if err := p.Init(ctx, a.Runtime); err != nil {
+			return fmt.Errorf("failed to init plugin %s: %w", p.Name(), err)
+		}
+	}
+	return nil
+}
+
+// RunUntilDone runs the agent loop until it finishes a task or context is cancelled.
+// Returns the outputs from AgentFinishAction if successful.
+func (a *Agent) RunUntilDone(ctx context.Context) (map[string]string, error) {
+	slog.Info("Starting CodeAct agent sub-task", "conversation_id", a.ConversationID)
+	if err := a.InitPlugins(ctx); err != nil {
+		return nil, err
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+			// Peek for FinishAction before stepping?
+			// Actually Step handles adding events. We need to check if the LAST event was finish.
+			// But Step returns error, not event.
+
+			// Check if finished
+			evts := a.EventStream.GetEvents()
+			if len(evts) > 0 {
+				lastEvent := evts[len(evts)-1]
+				if lastEvent.Type == events.EventTypeAction {
+					if finishAct, ok := lastEvent.Content.(models.AgentFinishAction); ok {
+						return finishAct.Outputs, nil
+					}
+				}
+			}
+
+			err := a.Step(ctx)
+			if err != nil {
+				return nil, err
+			}
+			time.Sleep(100 * time.Millisecond) // Faster pace for sub-tasks?
 		}
 	}
 }

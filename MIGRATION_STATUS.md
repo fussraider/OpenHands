@@ -25,20 +25,34 @@ This file tracks the migration status of OpenHands backend features from Python 
 | Persistence | `openhands/storage/` | `server/events/event_stream.go` | ✅ Complete | JSONL file-based persistence for events/feedback. |
 | Prompt Loading | `openhands/agenthub/codeact_agent/prompts/` | `server/agent/prompts/` | ✅ Complete | Templates embedded and rendered dynamically (System Prompt + Additional Info). |
 
-## Remaining Python Features to Port
-
-The following features exist in the Python codebase but are **pending migration** to Go. These represent the gap between "Beta/Feature Complete" and "Full Parity".
+## Recently Completed
 
 | Area | Feature | Python Reference | Complexity | Notes |
 |---|---|---|---|---|
+| **Config** | **LLM Config** | `openhands/core/config/llm_config.py` | ✅ Complete | Implemented richer configuration options (Temperature, TopP, MaxOutputTokens) in `LLMConfig` and integrated with `LLMService`. |
+| **Integrations** | **Git Providers** | `openhands/integrations/` | ✅ Complete | Implemented generic `GitProvider` interface and `GitService` to support multiple providers (currently GitHub implemented). |
+| **Security** | **Advanced Analyzer** | `openhands/security/llm/analyzer.py` | ✅ Complete | Implemented `LLMSecurityAnalyzer` that actively queries LLM for risk assessment of commands. |
+| **Skills** | **Microagents** | `openhands/server/routes/git.py` | ✅ Complete | APIs for discovering and fetching microagents from Git repositories implemented in `server/services/github.go`. |
+| **Agents** | **Delegation** | `openhands/core/agent/agent.py` | ✅ Complete | Implemented `Delegator` in `RuntimeManager` and `RunUntilDone` in `Agent` to support sub-agents. |
 | **MCP** | **Full Client Impl** | `openhands/mcp/` | ✅ Complete | Implemented robust `Stdio` transport in `server/mcp/client.go` using `os/exec`. |
 | **Agents** | **Other Agents** | `openhands/agenthub/` | ✅ Complete | Ported `BrowsingAgent` in `server/agent/browsing_agent.go`. |
 | **Security** | **Analyzer** | `openhands/security/analyzer.py` | ✅ Complete | Implemented `BasicAnalyzer` blocking high-risk commands. |
 | **Memory** | **Condenser** | `openhands/memory/condenser/` | ✅ Complete | Implemented `TokenCondenser` and `NoOpCondenser` with integration into `Agent`. |
-| **MCP** | **Full Client Impl** | `openhands/mcp/` | ✅ Complete | Implemented robust `Stdio` transport in `server/mcp/client.go` using `os/exec`. |
 | **Runtime** | **Jupyter Kernel** | `openhands/runtime/plugins/jupyter/` | ✅ Complete | Implemented stateful execution via pickle persistence in `JupyterPlugin`. |
 | **Events** | **Task Tracking** | `openhands/events/observation/task_tracking.py` | ✅ Complete | Implemented `TaskTrackingObservation` and support in `EventStream`. |
 | **Events** | **Loop Recovery** | `openhands/events/observation/loop_recovery.py` | ✅ Complete | Implemented `LoopDetector` and integrated into Agent loop. |
+| **CLI** | **Command Line Mode** | `openhands/core/main.py` | ✅ Complete | Implemented `cmd/cli/main.go` for headless execution. |
+| **Server** | **Middlewares** | `openhands/server/middleware.py` | ✅ Complete | Implemented `RateLimitMiddleware` and `CacheControlMiddleware`. |
+| **Memory** | **Advanced Condensers** | `openhands/memory/condenser/impl/` | ✅ Complete | Implemented `LLMSummarizingCondenser` and `PipelineCondenser`. |
+
+## Pending Features
+
+The following features exist in the Python codebase but are **pending migration** to Go. These represent the gap between "Beta/Feature Complete" and "Full Parity".
+
+| Area | Feature | Python Source | Complexity | Notes |
+|---|---|---|---|---|
+| **Workflows** | **Issue Resolver** | `openhands/resolver/` | High | Automated pipeline for resolving GitHub issues into PRs. |
+| **API** | **Public Options (Dynamic)** | `openhands/server/routes/public.py` | Low | Dynamic fetching of supported models/agents for `/api/options/*` (currently mocked). |
 
 ## Do Not Implement
 

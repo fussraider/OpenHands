@@ -65,6 +65,8 @@ func main() {
 	mux.HandleFunc("GET /api/secrets", handlers.GetSecretsHandler)
 	mux.HandleFunc("POST /api/secrets", handlers.StoreSecretHandler)
 	mux.HandleFunc("DELETE /api/secrets/{key}", handlers.DeleteSecretHandler)
+	mux.HandleFunc("POST /api/add-git-providers", handlers.StoreGitProvidersHandler)
+	mux.HandleFunc("POST /api/unset-provider-tokens", handlers.UnsetGitProvidersHandler)
 
 	// Github / Git Provider API
 	mux.HandleFunc("GET /api/user/installations", handlers.GetUserInstallationsHandler)
@@ -73,6 +75,10 @@ func main() {
 	mux.HandleFunc("GET /api/user/search/repositories", handlers.SearchRepositoriesHandler)
 	mux.HandleFunc("GET /api/user/search/branches", handlers.SearchBranchesHandler)
 	mux.HandleFunc("GET /api/user/repository/branches", handlers.GetRepositoryBranchesHandler)
+	// Use wildcard for repository_name to allow slashes (owner/repo)
+	// Go 1.22+ supports wildcard {name...}
+	mux.HandleFunc("GET /api/user/repository/{repository_name...}/microagents", handlers.GetRepositoryMicroagentsHandler)
+	mux.HandleFunc("GET /api/user/repository/{repository_name...}/microagents/content", handlers.GetRepositoryMicroagentContentHandler)
 
 	// MCP Mount
 	mux.HandleFunc("/mcp/", handlers.MCPSSEHandler)
@@ -86,7 +92,11 @@ func main() {
 	mux.HandleFunc("/", handlers.SPAHandler(staticDir))
 
 	// Wrap with middleware
+	rateLimiter := middleware.NewRateLimiter(2, 1, 1) // 2 req/s, sleep 1s on burst
+
 	handler := middleware.AuthMiddleware(mux)
+	handler = middleware.CacheControlMiddleware(handler)
+	handler = middleware.RateLimitMiddleware(rateLimiter)(handler)
 
 	host := config.AppConfig.Server.Host
 	if host == "" {

@@ -8,6 +8,7 @@ import (
 	"openhands-go/server/config"
 	"openhands-go/server/events"
 	"openhands-go/server/llm"
+	"openhands-go/server/models"
 	"openhands-go/server/runtime"
 	"sync"
 )
@@ -112,6 +113,78 @@ func (rm *RuntimeManager) StopRuntime(conversationID string) error {
 
 // Delegate implements agent.Delegator
 func (rm *RuntimeManager) Delegate(ctx context.Context, agentName string, inputs map[string]interface{}) (map[string]interface{}, error) {
-	// TODO: Implement actual delegation (spawning sub-agent)
-	return nil, fmt.Errorf("delegation not implemented")
+	// 1. Determine Parent Context
+	// We don't have explicit parent ID passed here, but usually delegation happens within an existing conversation context.
+	// However, we are reusing the RuntimeManager which tracks runtimes by conversationID.
+	// We need a unique ID for the sub-agent session or reuse the runtime.
+	// Let's assume we reuse the runtime of the *caller*?
+	// But `Delegate` doesn't know the caller conversationID directly unless passed in ctx or we change signature.
+	// Wait, `Delegate` is method of `RuntimeManager` but called by `Agent`. `Agent` has `Delegator`.
+	// The `Agent` calling this is bound to a `ConversationID`.
+	// We should probably pass the parent conversation ID or `Runtime` to `Delegate`?
+	// The interface is `Delegate(ctx, agentName, inputs)`.
+	// We can put conversationID in ctx? Or `RuntimeManager` needs to know which agent called it?
+	// Actually `agent.NewAgent` passes `rm` as delegator.
+
+	// Simplification: Assume we create a TEMPORARY sub-conversation ID sharing the SAME runtime?
+	// Or just use the inputs to drive a new agent with a new EventStream but SAME runtime instance.
+
+	// Issue: `GetRuntime` takes `conversationID`.
+	// If we want to share runtime, we need the parent `conversationID`.
+	// Let's update `Delegator` interface or assume `inputs` contains it? No.
+	// Best practice: Pass `conversationID` in Context.
+
+	parentConversationID, ok := ctx.Value("conversation_id").(string)
+	if !ok {
+		// Fallback: This implementation of Delegator might need the ID stored in the struct if created per-agent.
+		// But RuntimeManager is a singleton-like service.
+		// Let's rely on Context for now.
+		return nil, fmt.Errorf("conversation_id missing from context")
+	}
+
+	rt, err := rm.GetRuntime(parentConversationID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get runtime for delegation: %w", err)
+	}
+
+	// 2. Create Isolated Event Stream for Sub-Task
+	subConversationID := fmt.Sprintf("%s-sub-%s", parentConversationID, agentName)
+	// We don't want to persist this necessarily, or maybe we do for debugging.
+	// Let's use in-memory stream or a separate file.
+	es := events.NewEventStream(subConversationID, "") // Empty path = in-memory
+
+	// 3. Initialize Sub-Agent
+	llmService, err := llm.NewLLMService(config.AppConfig.LLM)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create inputs message
+	taskDescription := fmt.Sprintf("You are a delegated agent working on: %s. Inputs: %v", agentName, inputs)
+	es.AddEvent(events.Event{
+		ID: "init",
+		Type: events.EventTypeAction,
+		Content: models.MessageAction{
+			Action: models.ActionTypeMessage,
+			Content: taskDescription,
+		},
+		Source: "user",
+	})
+
+	// Use specific agent config if available (e.g. BrowsingAgent)
+	// For now, we default to NewAgent which is CodeAct.
+	// If agentName == "BrowsingAgent", we could use NewBrowsingAgent.
+	subAgent := agent.NewAgent(agentName, subConversationID, llmService, rt, es, rm, config.AppConfig)
+
+	// 4. Run Sub-Agent
+	// This blocks until finish
+	outputs, err := subAgent.RunUntilDone(ctx)
+
+	// Convert map[string]string to map[string]interface{}
+	result := make(map[string]interface{})
+	for k, v := range outputs {
+		result[k] = v
+	}
+
+	return result, err
 }
