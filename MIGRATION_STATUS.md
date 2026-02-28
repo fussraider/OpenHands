@@ -49,7 +49,7 @@ The following features exist in the Python codebase but are **pending migration*
 |---|---|---|---|---|---|
 | **Workflows** | **Issue Resolver** | `openhands/resolver/` | Medium | High | Automated pipeline for resolving GitHub issues into PRs. It requires a standalone Go program (like `cmd/resolver`) to replicate `resolve_issue.py`. |
 | **API** | **Models List** | `openhands/server/routes/settings.py` | High | Low | Currently a mock list returned in `server/handlers/options.go` (previously `common.go`). |
-| **API** | **Public Options (Dynamic)** | `openhands/server/routes/public.py` | High | Low | Dynamic fetching of supported models/agents for `/api/options/*` (currently mocked in `server/handlers/options.go`). Required for full frontend feature parity. |
+| **API** | **Public Options (Dynamic)** | `openhands/server/routes/public.py` | High | Low | Dynamic fetching of supported models/agents/security analyzers for `/api/options/*` (currently mocked in `server/handlers/options.go`). Required for full frontend feature parity. |
 | **Integrations** | **MCP Integration** | `openhands/server/routes/mcp.py` | High | Medium | Currently a stub implementation returning 501 Not Implemented in `server/handlers/mcp.go`. |
 | **API** | **Security API** | `openhands/server/routes/security.py` | High | Medium | Currently a stub implementation returning 501 Not Implemented in `server/handlers/security.go`. |
 
