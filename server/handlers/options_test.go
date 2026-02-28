@@ -19,8 +19,8 @@ func TestOptionsHandlers(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&models); err != nil {
 		t.Errorf("ModelsHandler returned invalid JSON: %v", err)
 	}
-	if len(models) == 0 {
-		t.Errorf("ModelsHandler returned empty list")
+	if len(models) != 4 || models[0] != "gpt-4" {
+		t.Errorf("ModelsHandler returned unexpected list: %v", models)
 	}
 
 	// Test GetAgentsHandler
@@ -34,8 +34,8 @@ func TestOptionsHandlers(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&agents); err != nil {
 		t.Errorf("GetAgentsHandler returned invalid JSON: %v", err)
 	}
-	if len(agents) == 0 {
-		t.Errorf("GetAgentsHandler returned empty list")
+	if len(agents) != 2 || agents[0] != "CodeActAgent" {
+		t.Errorf("GetAgentsHandler returned unexpected list: %v", agents)
 	}
 
 	// Test GetSecurityAnalyzersHandler
@@ -49,7 +49,7 @@ func TestOptionsHandlers(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&analyzers); err != nil {
 		t.Errorf("GetSecurityAnalyzersHandler returned invalid JSON: %v", err)
 	}
-	if len(analyzers) == 0 {
-		t.Errorf("GetSecurityAnalyzersHandler returned empty list")
+	if len(analyzers) != 2 || analyzers[0] != "basic" {
+		t.Errorf("GetSecurityAnalyzersHandler returned unexpected list: %v", analyzers)
 	}
 }

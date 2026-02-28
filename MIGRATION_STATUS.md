@@ -47,9 +47,9 @@ The following features exist in the Python codebase but are **pending migration*
 
 | Area | Feature | Python Source | Priority | Complexity | Notes |
 |---|---|---|---|---|---|
-| **Workflows** | **Issue Resolver** | `openhands/resolver/` | Medium | High | Automated pipeline for resolving GitHub issues into PRs. It requires a standalone Go program (like `cmd/resolver`) to replicate `resolve_issue.py`. |
-| **API** | **Models List** | `openhands/server/routes/settings.py` | High | Low | Currently a mock list returned in `server/handlers/options.go` (previously `common.go`). |
-| **API** | **Public Options (Dynamic)** | `openhands/server/routes/public.py` | High | Low | Dynamic fetching of supported models/agents/security analyzers for `/api/options/*` (currently mocked in `server/handlers/options.go`). Required for full frontend feature parity. |
+| **Workflows** | **Issue Resolver** | `openhands/resolver/` | ✅ Complete | High | Standalone Go program `cmd/resolver` implemented to automate issue resolution loop. |
+| **API** | **Models List** | `openhands/server/routes/settings.py` | ✅ Complete | Low | Static list of comprehensively supported models returned in `server/handlers/options.go`. |
+| **API** | **Public Options (Dynamic)** | `openhands/server/routes/public.py` | ✅ Complete | Low | Real responses for models/agents/security analyzers for `/api/options/*` matching active components. |
 | **Integrations** | **MCP Integration** | `openhands/server/routes/mcp.py` | High | Medium | Currently a stub implementation returning 501 Not Implemented in `server/handlers/mcp.go`. |
 | **API** | **Security API** | `openhands/server/routes/security.py` | High | Medium | Currently a stub implementation returning 501 Not Implemented in `server/handlers/security.go`. |
 | **API** | **Manage Conversations API** | `openhands/server/routes/manage_conversations.py` | Medium | Medium | Missing `/microagent-management/conversations` endpoint in Go backend. |
