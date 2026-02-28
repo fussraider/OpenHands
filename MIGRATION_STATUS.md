@@ -49,10 +49,15 @@ This file tracks the migration status of OpenHands backend features from Python 
 
 The following features exist in the Python codebase but are **pending migration** to Go. These represent the gap between "Beta/Feature Complete" and "Full Parity".
 
-| Area | Feature | Python Source | Complexity | Notes |
-|---|---|---|---|---|
-| **Workflows** | **Issue Resolver** | `openhands/resolver/` | High | Automated pipeline for resolving GitHub issues into PRs. |
-| **API** | **Public Options (Dynamic)** | `openhands/server/routes/public.py` | Low | Dynamic fetching of supported models/agents for `/api/options/*` (currently mocked). |
+| Area | Feature | Python Source | Priority | Complexity | Notes |
+|---|---|---|---|---|---|
+| **Workflows** | **Issue Resolver** | `openhands/resolver/` | Medium | High | Automated pipeline for resolving GitHub issues into PRs. It requires a standalone Go program (like `cmd/resolver`) to replicate `resolve_issue.py`. |
+| **API** | **Public Options (Dynamic)** | `openhands/server/routes/public.py` | High | Low | Dynamic fetching of supported models/agents for `/api/options/*` (currently mocked in `server/handlers/options.go`). Required for full frontend feature parity. |
+
+## Plan for myself
+
+1.  **Dynamic Public Options API**: Update `server/handlers/options.go` to dynamically fetch the list of available LLM models (from `langchaingo` or configuration), the list of registered agents, and the list of available security analyzers, matching the behavior of the legacy Python `/api/options` endpoints.
+2.  **Issue Resolver CLI**: Design and implement a new command-line tool (`cmd/resolver/main.go`) that utilizes the core Go agent components (Agent, LLM, Runtime) to automate the resolution of GitHub issues, porting the logic from `openhands/resolver/issue_resolver.py` and `resolve_issue.py`.
 
 ## Do Not Implement
 
