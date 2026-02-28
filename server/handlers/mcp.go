@@ -7,7 +7,8 @@ import (
 
 // MCPSSEHandler mocks the MCP SSE endpoint
 func MCPSSEHandler(w http.ResponseWriter, r *http.Request) {
-	// This should eventually be a WebSocket or SSE endpoint for FastMCP
+	// Revert to 501 Not Implemented because the SSE route is currently unneeded for native
+	// Go Stdio MCP implementation, but the API endpoint itself is required for parity checking.
 	w.WriteHeader(http.StatusNotImplemented)
 	json.NewEncoder(w).Encode(map[string]string{
 		"error": "MCP integration not implemented (mock)",

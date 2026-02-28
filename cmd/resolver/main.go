@@ -13,11 +13,14 @@ import (
 	"os"
 
 	"github.com/google/uuid"
+	"github.com/google/go-github/v60/github"
+	"golang.org/x/oauth2"
+	"strings"
 )
 
 func main() {
 	issueNumber := flag.Int("issue", 0, "GitHub Issue Number to resolve")
-	repo := flag.String("repo", "", "GitHub Repository (owner/repo)")
+	repoStr := flag.String("repo", "", "GitHub Repository (owner/repo)")
 	token := flag.String("token", os.Getenv("GITHUB_TOKEN"), "GitHub Token")
 	flag.Parse()
 
@@ -28,28 +31,52 @@ func main() {
 		os.Exit(1)
 	}
 
-	if *issueNumber == 0 || *repo == "" || *token == "" {
+	if *issueNumber == 0 || *repoStr == "" || *token == "" {
 		fmt.Println("Error: Please provide an issue number (-issue), repository (-repo), and token (-token or GITHUB_TOKEN env).")
 		flag.Usage()
 		os.Exit(1)
 	}
 
+	parts := strings.Split(*repoStr, "/")
+	if len(parts) != 2 {
+		fmt.Println("Error: Repository must be in the format 'owner/repo'")
+		os.Exit(1)
+	}
+	owner, repoName := parts[0], parts[1]
+
 	ctx := context.Background()
 
-	// 1. Fetch Issue Details
+	// 1. Fetch Issue Details programmatically
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: *token},
+	)
+	tc := oauth2.NewClient(ctx, ts)
+	client := github.NewClient(tc)
 
-	// We need to fetch the issue. Since GitProvider doesn't have GetIssue,
-	// we will construct a specialized prompt for the agent to fetch it using bash/curl if needed,
-	// or we can use the Github client directly if we expose it.
-	// For this CLI, the easiest way to achieve the "Resolver" workflow without adding new GitProvider methods
-	// is to instruct the agent to use the GitHub CLI (gh) or curl to read the issue and then fix it.
+	issue, _, err := client.Issues.Get(ctx, owner, repoName, *issueNumber)
+	if err != nil {
+		slog.Error("Failed to fetch issue from GitHub", "error", err)
+		os.Exit(1)
+	}
 
-	task := fmt.Sprintf(`Please resolve GitHub Issue #%d in repository %s.
-1. Use the 'gh' CLI or curl with the provided GITHUB_TOKEN to fetch the issue details.
-2. Clone the repository and checkout a new branch.
-3. Fix the issue described.
-4. Commit your changes, push the branch, and open a Pull Request.
-`, *issueNumber, *repo)
+	issueTitle := issue.GetTitle()
+	issueBody := issue.GetBody()
+
+	slog.Info("Fetched issue", "title", issueTitle)
+
+	// We pass the issue context via prompt without placing the token in the event stream history
+	task := fmt.Sprintf(`Please resolve the following GitHub Issue in repository %s/%s.
+
+ISSUE TITLE: %s
+ISSUE BODY:
+%s
+
+Instructions:
+1. Clone the repository locally: git clone https://github.com/%s/%s.git
+2. cd into the repository and checkout a new branch 'fix-issue-%d'
+3. Implement the necessary changes to fix the issue described above.
+4. Verify your changes.
+`, owner, repoName, issueTitle, issueBody, owner, repoName, *issueNumber)
 
 	sid := "resolver-" + uuid.New().String()
 
@@ -57,29 +84,24 @@ func main() {
 	rm := services.NewRuntimeManager()
 
 	// Create Runtime
-	_, err := rm.CreateRuntime(ctx, sid)
+	rt, err := rm.CreateRuntime(ctx, sid)
 	if err != nil {
 		slog.Error("Failed to create runtime", "error", err)
 		os.Exit(1)
 	}
 	defer rm.StopRuntime(sid)
 
-	// Inject GITHUB_TOKEN into the runtime environment for the agent to use
-	// We do this by sending an initial command to export it.
+	// Inject GITHUB_TOKEN directly into the runtime securely (via runtime API)
+	// We use rt.Execute to run it silently inside the sandbox without logging it to event stream
+	// Note: LocalRuntime and DockerRuntime execute commands in bash.
+	_, _, err = rt.Execute(ctx, "export GITHUB_TOKEN='" + *token + "'")
+	if err != nil {
+		slog.Error("Failed to inject token into runtime", "error", err)
+		os.Exit(1)
+	}
 
 	// Create EventStream
 	es := events.NewEventStream(sid, "")
-
-	// Set env var in runtime
-	es.AddEvent(events.Event{
-		ID:   uuid.New().String(),
-		Type: events.EventTypeAction,
-		Content: models.CmdRunAction{
-			Action:  models.ActionTypeCmdRun,
-			Command: fmt.Sprintf("export GITHUB_TOKEN=%s", *token),
-		},
-		Source: "user",
-	})
 
 	// Add Initial Task
 	es.AddEvent(events.Event{
@@ -109,7 +131,7 @@ func main() {
 		}
 	})
 
-	slog.Info("Starting Agent via Resolver CLI", "sid", sid, "issue", *issueNumber, "repo", *repo)
+	slog.Info("Starting Agent via Resolver CLI", "sid", sid, "issue", *issueNumber, "repo", *repoStr)
 
 	// Start Agent
 	err = rm.StartAgent(ctx, sid, es)
@@ -129,5 +151,8 @@ func main() {
 	})
 
 	<-done
-	fmt.Println("\nIssue Resolution Process Completed.")
+	fmt.Println("\nAgent finished editing. Issue Resolution Process Completed.")
+
+	// Optional: programmatic PR creation could happen here.
+	// For now, the agent has made the code changes locally.
 }
