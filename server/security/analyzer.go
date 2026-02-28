@@ -20,6 +20,13 @@ type SecurityAnalyzer interface {
 }
 
 // BasicAnalyzer implements a simple keyword-based policy
+func ListAnalyzers() []string {
+	return []string{
+		"basic",
+		"llm",
+	}
+}
+
 type BasicAnalyzer struct{}
 
 func NewBasicAnalyzer() *BasicAnalyzer {

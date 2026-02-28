@@ -267,3 +267,9 @@ main
 settings.json
 conversations.json
 server.log
+
+# Go binaries
+cli
+cmd/server/server
+cmd/cli/cli
+openhands-server
