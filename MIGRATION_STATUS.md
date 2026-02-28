@@ -6,7 +6,6 @@ This file tracks the migration status of OpenHands backend features from Python 
 |---|---|---|---|---|
 | Health Check | `openhands/server/routes/health.py` | `server/handlers/common.go` | ✅ Complete | Basic /health and /alive endpoints implemented. |
 | Settings | `openhands/server/routes/settings.py` | `server/handlers/settings.go` | ✅ Complete | File-based settings persistence implemented. |
-| Models List | `openhands/server/routes/settings.py` (indirectly) | `server/handlers/common.go` | ✅ Complete | Mock list returned. |
 | Conversations | `openhands/server/routes/conversation.py` | `server/handlers/conversations.go` | ✅ Complete | File-based conversation persistence implemented. |
 | Static Files | `openhands/server/app.py` (config) | `server/handlers/static.go` | ✅ Complete | Serving frontend build with SPA fallback. |
 | Github Integration | `openhands/server/routes/git.py` | `server/handlers/github.go` | ✅ Complete | Implemented using `google/go-github`. |
@@ -14,9 +13,6 @@ This file tracks the migration status of OpenHands backend features from Python 
 | Secrets API | `openhands/server/routes/secrets.py` | `server/handlers/secrets.go` | ✅ Complete | In-memory secrets store implemented. |
 | Feedback API | `openhands/server/routes/feedback.py` | `server/handlers/feedback.go` | ✅ Complete | Implemented persistent feedback storage. |
 | Trajectory API | `openhands/server/routes/trajectory.py` | `server/handlers/trajectory.go` | ✅ Complete | Implemented with persistent event stream. |
-| MCP Integration | `openhands/server/routes/mcp.py` | `server/handlers/mcp.go` | ✅ Complete | Stub implementation. |
-| Public API | `openhands/server/routes/public.py` | `server/handlers/options.go` | ✅ Complete | Implemented as Options API. |
-| Security API | `openhands/server/routes/security.py` | `server/handlers/security.go` | ✅ Complete | Stub implementation. |
 | Socket.IO Events | `openhands/server/routes/socket.py` | `server/ws/socket.go` | ✅ Complete | Supports `oh_user_action` and broadcasts `oh_event`. |
 | Stateful Shell | `openhands/runtime/impl/` | `server/runtime/shell.go` | ✅ Complete | Uses `creack/pty` for local and hijacked Docker streams for container execution. |
 | Browser Plugin | `openhands/runtime/browser/` | `server/runtime/plugins/browser` | ✅ Complete | Using `playwright-go`. |
@@ -52,7 +48,14 @@ The following features exist in the Python codebase but are **pending migration*
 | Area | Feature | Python Source | Priority | Complexity | Notes |
 |---|---|---|---|---|---|
 | **Workflows** | **Issue Resolver** | `openhands/resolver/` | Medium | High | Automated pipeline for resolving GitHub issues into PRs. It requires a standalone Go program (like `cmd/resolver`) to replicate `resolve_issue.py`. |
-| **API** | **Public Options (Dynamic)** | `openhands/server/routes/public.py` | High | Low | Dynamic fetching of supported models/agents for `/api/options/*` (currently mocked in `server/handlers/options.go`). Required for full frontend feature parity. |
+| **API** | **Models List** | `openhands/server/routes/settings.py` | High | Low | Currently a mock list returned in `server/handlers/options.go` (previously `common.go`). |
+| **API** | **Public Options (Dynamic)** | `openhands/server/routes/public.py` | High | Low | Dynamic fetching of supported models/agents/security analyzers for `/api/options/*` (currently mocked in `server/handlers/options.go`). Required for full frontend feature parity. |
+| **Integrations** | **MCP Integration** | `openhands/server/routes/mcp.py` | High | Medium | Currently a stub implementation returning 501 Not Implemented in `server/handlers/mcp.go`. |
+| **API** | **Security API** | `openhands/server/routes/security.py` | High | Medium | Currently a stub implementation returning 501 Not Implemented in `server/handlers/security.go`. |
+| **API** | **Manage Conversations API** | `openhands/server/routes/manage_conversations.py` | Medium | Medium | Missing `/microagent-management/conversations` endpoint in Go backend. |
+| **API** | **App Server (API v1)** | `openhands/app_server/` | High | High | The entire `api/v1` routes (sandbox, events, user, etc.) are currently missing in the Go backend. |
+| **Agents** | **Additional Agents** | `openhands/agenthub/` | Low | High | `readonly_agent`, `visualbrowsing_agent`, `dummy_agent` missing from `server/agent/`. |
+| **Plugins** | **Additional Plugins** | `openhands/runtime/plugins/` | Medium | Medium | `agent_skills` and `vscode` plugins missing from `server/runtime/plugins/`. |
 
 ## Plan for myself
 
