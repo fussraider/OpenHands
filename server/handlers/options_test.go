@@ -34,7 +34,7 @@ func TestOptionsHandlers(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&agents); err != nil {
 		t.Errorf("GetAgentsHandler returned invalid JSON: %v", err)
 	}
-	if len(agents) != 2 || agents[0] != "CodeActAgent" {
+	if len(agents) != 4 || agents[0] != "CodeActAgent" {
 		t.Errorf("GetAgentsHandler returned unexpected list: %v", agents)
 	}
 

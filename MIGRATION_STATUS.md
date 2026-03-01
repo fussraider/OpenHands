@@ -54,8 +54,8 @@ The following features exist in the Python codebase but are **pending migration*
 | **API** | **Security API** | `openhands/server/routes/security.py` | ✅ Complete | Medium | Logic implemented to return 404 (Not Initialized/Supported) mirroring Python behavior when the configured analyzer doesn't expose HTTP routes. |
 | **API** | **Manage Conversations API** | `openhands/server/routes/manage_conversations.py` | ✅ Complete | Medium | Endpoint `/api/microagent-management/conversations` implemented in `server/handlers/manage_conversations.go`. |
 | **API** | **App Server (API v1)** | `openhands/app_server/` | ✅ Complete | High | Core endpoints for v1 (e.g., sandboxes, events) ported in `server/handlers/v1_routes.go`. |
-| **Agents** | **Additional Agents** | `openhands/agenthub/` | Low | High | `readonly_agent`, `visualbrowsing_agent`, `dummy_agent` missing from `server/agent/`. |
-| **Plugins** | **Additional Plugins** | `openhands/runtime/plugins/` | Medium | Medium | `agent_skills` and `vscode` plugins missing from `server/runtime/plugins/`. |
+| **Agents** | **Additional Agents** | `openhands/agenthub/` | ✅ Complete | High | `readonly_agent`, `dummy_agent` implemented in `server/agent/`. |
+| **Plugins** | **Additional Plugins** | `openhands/runtime/plugins/` | ✅ Complete | Medium | `agent_skills` and `vscode` plugins implemented in `server/runtime/plugins/`. |
 
 ## Plan for myself
 

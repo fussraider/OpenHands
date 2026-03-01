@@ -33,7 +33,7 @@ func GetAgentsHandler(w http.ResponseWriter, r *http.Request) {
 	// For Go implementation, these are the natively defined agents.
 	// Since there is no dynamic registry in Go yet (they are hardcoded in factories),
 	// we explicitly list the ones compiled into the binary.
-	agents := []string{"CodeActAgent", "BrowsingAgent"}
+	agents := []string{"CodeActAgent", "BrowsingAgent", "ReadOnlyAgent", "DummyAgent"}
 	json.NewEncoder(w).Encode(agents)
 }
 
