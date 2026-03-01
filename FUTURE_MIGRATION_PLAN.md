@@ -31,10 +31,10 @@ Currently, the V1 routes (`/api/v1/sandboxes`, `/api/v1/events`) in `server/hand
 *   **Status:** ✅ Completed
 *   **Notes:** Implemented GitLab, Bitbucket, and Azure DevOps stub structures satisfying the `GitProvider` interface, allowing further scaling and integrations.
 
-## 5. Runtime Plugins Logic (Completed)
+## 5. Runtime Plugins Logic (Completed/Stubbed)
 
-*   **Status:** ✅ Completed
-*   **Notes:** Documented the required mechanisms inside the Go plugin structs (`agent_skills.go`, `vscode.go`) to inform future implementers how they should be fully ported into the container runtimes.
+*   **Status:** ✅ Completed (Stubbed)
+*   **Notes:** Documented the required mechanisms inside the Go plugin structs (`agent_skills.go`, `vscode.go`). The actual implementation (injecting Python scripts and VSCode server into bash execution) was intentionally left as structural stubs because these Python source files are marked as `Legacy-V0` (deprecated and slated for removal). Implementing them fully in Go would create unnecessary coupled technical debt.
 
 ## 6. Agent Logic Refinement (Completed)
 
