@@ -60,3 +60,7 @@ func (a *BasicAnalyzer) analyzeCommand(cmd string) (SecurityRisk, string, error)
 
 	return RiskLow, "", nil
 }
+
+func init() {
+	RegisterAnalyzer("basic")
+}

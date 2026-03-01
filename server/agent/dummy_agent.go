@@ -27,3 +27,7 @@ func NewDummyAgent(id, conversationID string, llmService *llm.LLMService, rt run
 func (a *DummyAgent) InitPlugins(ctx context.Context) error {
 	return nil
 }
+
+func init() {
+	RegisterAgent("DummyAgent")
+}

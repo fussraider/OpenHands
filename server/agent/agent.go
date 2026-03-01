@@ -576,3 +576,7 @@ func (a *Agent) RunUntilDone(ctx context.Context) (map[string]string, error) {
 		}
 	}
 }
+
+func init() {
+	RegisterAgent("CodeActAgent")
+}

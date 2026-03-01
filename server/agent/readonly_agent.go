@@ -31,3 +31,7 @@ func (a *ReadOnlyAgent) InitPlugins(ctx context.Context) error {
 	// Keep tools standard, rely on security analyzer or prompt for read-only constraint.
 	return nil
 }
+
+func init() {
+	RegisterAgent("ReadOnlyAgent")
+}

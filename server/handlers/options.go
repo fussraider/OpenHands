@@ -3,7 +3,9 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"openhands-go/server/agent"
 	"openhands-go/server/config"
+	"openhands-go/server/security"
 )
 
 func ModelsHandler(w http.ResponseWriter, r *http.Request) {
@@ -30,16 +32,14 @@ func ModelsHandler(w http.ResponseWriter, r *http.Request) {
 
 func GetAgentsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	// For Go implementation, these are the natively defined agents.
-	// Since there is no dynamic registry in Go yet (they are hardcoded in factories),
-	// we explicitly list the ones compiled into the binary.
-	agents := []string{"CodeActAgent", "BrowsingAgent", "ReadOnlyAgent", "DummyAgent"}
+	// Fetch agents dynamically from the agent package registry.
+	agents := agent.GetAvailableAgents()
 	json.NewEncoder(w).Encode(agents)
 }
 
 func GetSecurityAnalyzersHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	// Explicitly list the compiled-in security analyzers from server/security/
-	analyzers := []string{"basic", "llm"}
+	// Fetch analyzers dynamically from the security package registry.
+	analyzers := security.GetAvailableAnalyzers()
 	json.NewEncoder(w).Encode(analyzers)
 }
