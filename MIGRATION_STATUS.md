@@ -5,18 +5,18 @@ This file tracks the migration status of OpenHands backend features from Python 
 | Feature | Python Source | Go Implementation | Status | Notes |
 |---|---|---|---|---|
 | Health Check | `openhands/server/routes/health.py` | `server/handlers/common.go` | ✅ Complete | Basic /health and /alive endpoints implemented. |
-| Settings | `openhands/server/routes/settings.py` | `server/handlers/settings.go` | ✅ Complete | File-based settings persistence implemented. |
+| Settings | `openhands/server/routes/settings.py` | `server/handlers/settings.go` | ✅ Complete | File-based settings persistence implemented. *Note: Advanced token merging logic from config.toml missing.* |
 | Conversations | `openhands/server/routes/conversation.py` | `server/handlers/conversations.go` | ✅ Complete | File-based conversation persistence implemented. |
 | Static Files | `openhands/server/app.py` (config) | `server/handlers/static.go` | ✅ Complete | Serving frontend build with SPA fallback. |
 | Github Integration | `openhands/server/routes/git.py` | `server/handlers/github.go` | ✅ Complete | Implemented using `google/go-github`. |
 | Files API | `openhands/server/routes/files.py` | `server/handlers/files.go` | ✅ Complete | Local workspace access implemented with security checks. |
-| Secrets API | `openhands/server/routes/secrets.py` | `server/handlers/secrets.go` | ✅ Complete | In-memory secrets store implemented. |
+| Secrets API | `openhands/server/routes/secrets.py` | `server/handlers/secrets.go` | ✅ Complete | In-memory secrets store implemented. *Note: Needs persistent backend backing like Vault or DB for full parity.* |
 | Feedback API | `openhands/server/routes/feedback.py` | `server/handlers/feedback.go` | ✅ Complete | Implemented persistent feedback storage. |
 | Trajectory API | `openhands/server/routes/trajectory.py` | `server/handlers/trajectory.go` | ✅ Complete | Implemented with persistent event stream. |
 | Socket.IO Events | `openhands/server/routes/socket.py` | `server/ws/socket.go` | ✅ Complete | Supports `oh_user_action` and broadcasts `oh_event`. |
-| Stateful Shell | `openhands/runtime/impl/` | `server/runtime/shell.go` | ✅ Complete | Uses `creack/pty` for local and hijacked Docker streams for container execution. |
+| Stateful Shell | `openhands/runtime/impl/` | `server/runtime/shell.go` | ✅ Complete | Uses `creack/pty` for local and hijacked Docker streams for container execution. *Note: Advanced file tar/copy capabilities to/from runtime incomplete.* |
 | Browser Plugin | `openhands/runtime/browser/` | `server/runtime/plugins/browser` | ✅ Complete | Using `playwright-go`. |
-| Agent Logic | `openhands/core/agent/` | `server/agent/agent.go` | ✅ Complete | `CodeActAgent` implementation with multi-turn loop and tool calling. |
+| Agent Logic | `openhands/core/agent/` | `server/agent/agent.go` | ✅ Complete | `CodeActAgent` implementation with multi-turn loop and tool calling. *Note: Micro-agents/system prompt override injection logic from repo files missing.* |
 | Plugin System | `openhands/runtime/plugins/` | `server/runtime/plugins/` | ✅ Complete | Generic `Plugin` interface and integration. |
 | Persistence | `openhands/storage/` | `server/events/event_stream.go` | ✅ Complete | JSONL file-based persistence for events/feedback. |
 | Prompt Loading | `openhands/agenthub/codeact_agent/prompts/` | `server/agent/prompts/` | ✅ Complete | Templates embedded and rendered dynamically (System Prompt + Additional Info). |
@@ -64,6 +64,7 @@ While the structural API routes have been established to unblock frontend compat
 | Area | Feature | Python Source | Priority | Complexity | Notes |
 |---|---|---|---|---|---|
 | **API** | **Deep App Server (v1)** | `openhands/app_server/` | High | High | V1 routes (`/api/v1/sandboxes`, `/api/v1/events`) currently return basic or mock data. Needs deep integration with `EventStore`, user context, WebSocket event streaming, and persistent database sessions. |
+| **API** | **Full Feature Parity** | `openhands/server/` | Medium | Medium | Features like Secrets store encryption, Config.toml deep-merging, and Runtime container file copying are simplified. |
 | **Integrations** | **Git Providers (Full)** | `openhands/integrations/` | Medium | Medium | GitHub is fully supported, but GitLab, Bitbucket, and Azure DevOps are missing their concrete implementations in `server/services/git_provider.go`. |
 | **Runtime** | **Plugins Logic** | `openhands/runtime/plugins/` | Medium | High | `agent_skills` and `vscode` plugins are currently structural stubs in `server/runtime/plugins/`. They need full bash-execution and interaction logic ported. |
 | **Agents** | **Agent Logic** | `openhands/agenthub/` | Low | Medium | `readonly_agent` and `dummy_agent` exist structurally but may need tighter integration with the Security Analyzer to truly enforce read-only constraints dynamically. |
