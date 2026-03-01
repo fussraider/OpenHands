@@ -17,8 +17,11 @@ func NewGitService(cfg *config.Config) *GitService {
 }
 
 func (s *GitService) GetProvider(ctx context.Context, token string) (GitProvider, error) {
-	// Simple logic: if token starts with "ghp_" or "github_pat_" or just default to GitHub for now.
-	// Real implementation might need more explicit provider selection from request.
+	// Simple logic for determining provider based on context or token prefix
+	// In a real implementation this should be passed in via API context
+	// For MVP, if there is a way to determine it, we'll return the specific provider
+
+	// Default to GitHub
 	return s.Provider, nil
 }
 

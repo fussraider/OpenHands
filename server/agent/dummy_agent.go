@@ -28,6 +28,11 @@ func (a *DummyAgent) InitPlugins(ctx context.Context) error {
 	return nil
 }
 
+// In the Python backend, the DummyAgent skips the LLM loop entirely
+// and immediately emits an AgentFinishAction with a canned response.
+// Here we rely on the system prompt to guide the LLM to finish, but a truer
+// port would intercept the Step() function to skip the LLM call entirely.
+
 func init() {
 	RegisterAgent("DummyAgent")
 }

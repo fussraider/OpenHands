@@ -10,9 +10,26 @@ import (
 
 func ModelsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	// If a specific provider is loaded, return its models. For langchaingo OpenAI we can't easily list,
-	// so we return the currently configured model as guaranteed, plus common defaults if using standard providers.
-	models := []string{"gpt-4", "gpt-3.5-turbo", "claude-3-opus", "claude-3-sonnet"}
+
+	// Pre-defined set of openhands models representing what is usually supported by proxies like litellm
+	openhandsModels := []string{
+		"openhands/claude-opus-4-5-20251101",
+		"openhands/claude-sonnet-4-5-20250929",
+		"openhands/gpt-5.2-codex",
+		"openhands/gpt-5.2",
+		"openhands/minimax-m2.5",
+		"openhands/gemini-3-pro-preview",
+		"openhands/gemini-3-flash-preview",
+		"openhands/deepseek-chat",
+		"openhands/devstral-medium-2512",
+		"openhands/kimi-k2-0711-preview",
+		"openhands/qwen3-coder-480b",
+		"claude-3-5-sonnet-20241022",
+		"gpt-4o",
+	}
+
+	models := make([]string, 0, len(openhandsModels))
+	models = append(models, openhandsModels...)
 
 	if config.AppConfig != nil && config.AppConfig.LLM.Model != "" {
 		found := false

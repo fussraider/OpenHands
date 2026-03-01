@@ -18,6 +18,8 @@ func (p *VSCodePlugin) Name() string {
 
 func (p *VSCodePlugin) Init(ctx context.Context) error {
 	// Initialize IDE workspace
+	// In the real Python implementation, this downloads the VSCode server,
+	// injects it into the container runtime, and starts it on a specific port.
 	return nil
 }
 

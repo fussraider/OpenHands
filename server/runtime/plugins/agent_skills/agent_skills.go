@@ -17,7 +17,10 @@ func (p *AgentSkillsPlugin) Name() string {
 }
 
 func (p *AgentSkillsPlugin) Init(ctx context.Context) error {
-	// Initialize standard library of agent skills
+	// In the real Python implementation, this writes `agent_skills.py` to the sandbox
+	// and injects imports into the `.bashrc` or directly loads them in the session
+	// Example: echo "source /path/to/agent_skills.sh" >> ~/.bashrc
+	// This ensures the agent has `edit`, `search`, `find` etc available as bash commands.
 	return nil
 }
 

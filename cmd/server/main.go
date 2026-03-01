@@ -10,6 +10,7 @@ import (
 	"openhands-go/server/logger"
 	"openhands-go/server/middleware"
 	"openhands-go/server/observability"
+	"openhands-go/server/services"
 	"openhands-go/server/ws"
 )
 
@@ -85,6 +86,7 @@ func main() {
 	// MCP Mount
 	mux.HandleFunc("/mcp/", handlers.MCPSSEHandler)
 
+	handlers.SetRuntimeManager(services.NewRuntimeManager())
 	handlers.RegisterV1Routes(mux)
 
 	mux.HandleFunc("GET /health", handlers.HealthHandler)

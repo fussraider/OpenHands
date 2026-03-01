@@ -32,6 +32,11 @@ func (a *ReadOnlyAgent) InitPlugins(ctx context.Context) error {
 	return nil
 }
 
+// In the Python backend, read_only agent enforces this constraint deeply.
+// Here we rely heavily on the system prompt and the SecurityAnalyzer.
+// A more complete implementation would actively strip tools that can mutate state
+// before passing them to the LLM, but this satisfies the MVP structure.
+
 func init() {
 	RegisterAgent("ReadOnlyAgent")
 }

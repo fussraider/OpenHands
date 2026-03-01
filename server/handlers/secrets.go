@@ -1,8 +1,15 @@
 package handlers
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 )
@@ -42,9 +49,15 @@ func StoreSecretHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	encryptedValue, err := encrypt(req.Value)
+	if err != nil {
+		http.Error(w, "Failed to encrypt secret", http.StatusInternalServerError)
+		return
+	}
+
 	secretsMutex.Lock()
 	defer secretsMutex.Unlock()
-	secretsStore[req.Key] = req.Value
+	secretsStore[req.Key] = encryptedValue
 
 	w.WriteHeader(http.StatusOK)
 }
@@ -73,7 +86,10 @@ func StoreGitProvidersHandler(w http.ResponseWriter, r *http.Request) {
 		// Simplification for MVP: just store the token value.
 		// Real implementation might store JSON string representing the struct.
 		data, _ := json.Marshal(tokenData)
-		secretsStore[key] = string(data)
+		encryptedValue, err := encrypt(string(data))
+		if err == nil {
+			secretsStore[key] = encryptedValue
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -109,4 +125,88 @@ func DeleteSecretHandler(w http.ResponseWriter, r *http.Request) {
 	delete(secretsStore, key)
 
 	w.WriteHeader(http.StatusOK)
+}
+
+var encryptionKey []byte
+
+func init() {
+	key := os.Getenv("OPENHANDS_SECRETS_KEY")
+	if key == "" {
+		// Use a default key for local development if not provided,
+		// but in production this should be set securely.
+		// WARNING: This is highly insecure and should never be used in production.
+		key = "default-insecure-32byte-secret!!"
+	}
+
+	// Ensure key is 32 bytes for AES-256
+	if len(key) < 32 {
+		padding := make([]byte, 32-len(key))
+		for i := range padding {
+			padding[i] = '0'
+		}
+		key += string(padding)
+	} else if len(key) > 32 {
+		key = key[:32]
+	}
+
+	encryptionKey = []byte(key)
+}
+
+func encrypt(text string) (string, error) {
+	block, err := aes.NewCipher(encryptionKey)
+	if err != nil {
+		return "", err
+	}
+
+	ciphertext := make([]byte, aes.BlockSize+len(text))
+	iv := ciphertext[:aes.BlockSize]
+	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+		return "", err
+	}
+
+	stream := cipher.NewCFBEncrypter(block, iv)
+	stream.XORKeyStream(ciphertext[aes.BlockSize:], []byte(text))
+
+	return base64.URLEncoding.EncodeToString(ciphertext), nil
+}
+
+func decrypt(cryptoText string) (string, error) {
+	ciphertext, err := base64.URLEncoding.DecodeString(cryptoText)
+	if err != nil {
+		return "", err
+	}
+
+	block, err := aes.NewCipher(encryptionKey)
+	if err != nil {
+		return "", err
+	}
+
+	if len(ciphertext) < aes.BlockSize {
+		return "", fmt.Errorf("ciphertext too short")
+	}
+	iv := ciphertext[:aes.BlockSize]
+	ciphertext = ciphertext[aes.BlockSize:]
+
+	stream := cipher.NewCFBDecrypter(block, iv)
+	stream.XORKeyStream(ciphertext, ciphertext)
+
+	return string(ciphertext), nil
+}
+
+func GetSecret(key string) (string, bool) {
+	secretsMutex.RLock()
+	defer secretsMutex.RUnlock()
+
+	encryptedValue, ok := secretsStore[key]
+	if !ok {
+		return "", false
+	}
+
+	decryptedValue, err := decrypt(encryptedValue)
+	if err != nil {
+		// If decryption fails, it might be an old unencrypted secret or a bad key.
+		// For safety, return the encrypted string or empty.
+		return "", false
+	}
+	return decryptedValue, true
 }
