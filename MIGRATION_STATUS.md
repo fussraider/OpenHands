@@ -50,12 +50,24 @@ The following features exist in the Python codebase but are **pending migration*
 | **Workflows** | **Issue Resolver** | `openhands/resolver/` | ✅ Complete | High | Standalone Go program `cmd/resolver` implemented to automate issue resolution loop. |
 | **API** | **Models List** | `openhands/server/routes/settings.py` | ✅ Complete (MOCKED) | Low | ⚠️ STATIC LIST: Returned in `server/handlers/options.go` instead of dynamically fetching from providers. |
 | **API** | **Public Options (Dynamic)** | `openhands/server/routes/public.py` | ✅ Complete (MOCKED) | Low | ⚠️ STATIC LIST: Hardcoded lists for models/agents/security analyzers for `/api/options/*` since Go lacks a dynamic registry. |
-| **Integrations** | **MCP Integration** | `openhands/server/routes/mcp.py` | High | Medium | ⚠️ UNSUPPORTED: Go lacks a FastMCP SSE server library. Returning 501. PR tools are handled via Agent tool bindings instead. |
+| **Integrations** | **MCP Integration** | `openhands/server/routes/mcp.py` | ✅ Complete | High | Ported FastMCP Python SSE logic to Go using `mark3labs/mcp-go`. Exposes `/mcp/` endpoint and registers `create_pr` tool. |
 | **API** | **Security API** | `openhands/server/routes/security.py` | ✅ Complete | Medium | Logic implemented to return 404 (Not Initialized/Supported) mirroring Python behavior when the configured analyzer doesn't expose HTTP routes. |
 | **API** | **Manage Conversations API** | `openhands/server/routes/manage_conversations.py` | ✅ Complete | Medium | Endpoint `/api/microagent-management/conversations` implemented in `server/handlers/manage_conversations.go`. |
 | **API** | **App Server (API v1)** | `openhands/app_server/` | ✅ Complete | High | Core endpoints for v1 (e.g., sandboxes, events) ported in `server/handlers/v1_routes.go`. |
 | **Agents** | **Additional Agents** | `openhands/agenthub/` | ✅ Complete | High | `readonly_agent`, `dummy_agent` implemented in `server/agent/`. |
 | **Plugins** | **Additional Plugins** | `openhands/runtime/plugins/` | ✅ Complete | Medium | `agent_skills` and `vscode` plugins implemented in `server/runtime/plugins/`. |
+
+## Remaining Technical Debt (Post-MVP)
+
+While the structural API routes have been established to unblock frontend compatibility, the following areas require deep-dive implementation to reach true 1:1 functional parity with the Python codebase:
+
+| Area | Feature | Python Source | Priority | Complexity | Notes |
+|---|---|---|---|---|---|
+| **API** | **Deep App Server (v1)** | `openhands/app_server/` | High | High | V1 routes (`/api/v1/sandboxes`, `/api/v1/events`) currently return basic or mock data. Needs deep integration with `EventStore`, user context, WebSocket event streaming, and persistent database sessions. |
+| **Integrations** | **Git Providers (Full)** | `openhands/integrations/` | Medium | Medium | GitHub is fully supported, but GitLab, Bitbucket, and Azure DevOps are missing their concrete implementations in `server/services/git_provider.go`. |
+| **Runtime** | **Plugins Logic** | `openhands/runtime/plugins/` | Medium | High | `agent_skills` and `vscode` plugins are currently structural stubs in `server/runtime/plugins/`. They need full bash-execution and interaction logic ported. |
+| **Agents** | **Agent Logic** | `openhands/agenthub/` | Low | Medium | `readonly_agent` and `dummy_agent` exist structurally but may need tighter integration with the Security Analyzer to truly enforce read-only constraints dynamically. |
+| **Architecture**| **Dynamic Registries** | `openhands/server/routes/public.py` | Low | Low | Rebuilding Python's runtime introspection (e.g. `Agent.get_all_agents()`) in Go to replace the static lists in `server/handlers/options.go`. |
 
 ## Plan for myself
 
