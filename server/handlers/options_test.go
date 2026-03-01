@@ -19,8 +19,8 @@ func TestOptionsHandlers(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&models); err != nil {
 		t.Errorf("ModelsHandler returned invalid JSON: %v", err)
 	}
-	if len(models) == 0 {
-		t.Errorf("ModelsHandler returned empty list")
+	if len(models) != 4 || models[0] != "gpt-4" {
+		t.Errorf("ModelsHandler returned unexpected list: %v", models)
 	}
 
 	// Test GetAgentsHandler
@@ -34,6 +34,8 @@ func TestOptionsHandlers(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&agents); err != nil {
 		t.Errorf("GetAgentsHandler returned invalid JSON: %v", err)
 	}
+	// Due to maps not having guaranteed order and tests running concurrently,
+	// we just check that the list is populated.
 	if len(agents) == 0 {
 		t.Errorf("GetAgentsHandler returned empty list")
 	}

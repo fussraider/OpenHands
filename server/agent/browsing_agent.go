@@ -73,3 +73,7 @@ func (a *BrowsingAgent) InitPlugins(ctx context.Context) error {
 	// We can filter if needed.
 	return nil
 }
+
+func init() {
+	RegisterAgent("BrowsingAgent")
+}

@@ -6,49 +6,44 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"openhands-go/server/microagent"
+	"openhands-go/server/services"
 	"testing"
-
-	"github.com/google/go-github/v60/github"
 )
 
-type MockGithubService struct{}
+type MockGitProvider struct{}
 
-func (m *MockGithubService) ListRepositories(ctx context.Context, token string, page, perPage int, sort string) ([]*github.Repository, error) {
-	return []*github.Repository{{ID: github.Int64(1), FullName: github.String("openhands/test-repo")}}, nil
+func (m *MockGitProvider) ListRepositories(ctx context.Context, token string, page, perPage int, sort string) ([]services.GitRepository, error) {
+	return []services.GitRepository{{ID: "1", FullName: "openhands/test-repo"}}, nil
 }
-func (m *MockGithubService) SearchRepositories(ctx context.Context, token, query string, page, perPage int, sort, order string) ([]*github.Repository, error) {
-	return []*github.Repository{{ID: github.Int64(1), FullName: github.String("openhands/search-result")}}, nil
+func (m *MockGitProvider) SearchRepositories(ctx context.Context, token, query string, page, perPage int, sort, order string) ([]services.GitRepository, error) {
+	return []services.GitRepository{{ID: "1", FullName: "openhands/search-result"}}, nil
 }
-func (m *MockGithubService) GetBranches(ctx context.Context, token, owner, repo string, page, perPage int) ([]*github.Branch, error) {
-	return []*github.Branch{{Name: github.String("main")}}, nil
+func (m *MockGitProvider) GetBranches(ctx context.Context, token, owner, repo string, page, perPage int) ([]services.GitBranch, error) {
+	return []services.GitBranch{{Name: "main"}}, nil
 }
-func (m *MockGithubService) SearchBranches(ctx context.Context, token, owner, repo, query string) ([]*github.Branch, error) {
-	return []*github.Branch{{Name: github.String("main")}}, nil
+func (m *MockGitProvider) SearchBranches(ctx context.Context, token, owner, repo, query string) ([]services.GitBranch, error) {
+	return []services.GitBranch{{Name: "main"}}, nil
 }
-func (m *MockGithubService) GetUser(ctx context.Context, token string) (*github.User, error) {
-	return &github.User{Login: github.String("mock-user")}, nil
+func (m *MockGitProvider) GetUser(ctx context.Context, token string) (*services.GitUser, error) {
+	return &services.GitUser{Login: "mock-user"}, nil
 }
-func (m *MockGithubService) GetInstallations(ctx context.Context, token string) ([]*github.Installation, error) {
-	return []*github.Installation{}, nil
+func (m *MockGitProvider) GetInstallations(ctx context.Context, token string) ([]services.GitInstallation, error) {
+	return []services.GitInstallation{}, nil
 }
-func (m *MockGithubService) GetSuggestedTasks(ctx context.Context, token string) ([]interface{}, error) {
-	return []interface{}{}, nil
-}
-func (m *MockGithubService) GetFileContent(ctx context.Context, token, owner, repo, path string) (string, error) {
+func (m *MockGitProvider) GetFileContent(ctx context.Context, token, owner, repo, path string) (string, error) {
 	return "mock content", nil
 }
-func (m *MockGithubService) ListDirectory(ctx context.Context, token, owner, repo, path string) ([]*github.RepositoryContent, error) {
-	return []*github.RepositoryContent{}, nil
-}
-func (m *MockGithubService) GetMicroagents(ctx context.Context, token, owner, repo string) ([]microagent.MicroagentResponse, error) {
+func (m *MockGitProvider) GetMicroagents(ctx context.Context, token, owner, repo string) ([]microagent.MicroagentResponse, error) {
 	return []microagent.MicroagentResponse{}, nil
 }
-func (m *MockGithubService) GetMicroagentContent(ctx context.Context, token, owner, repo, path string) (*microagent.MicroagentContentResponse, error) {
+func (m *MockGitProvider) GetMicroagentContent(ctx context.Context, token, owner, repo, path string) (*microagent.MicroagentContentResponse, error) {
 	return &microagent.MicroagentContentResponse{Content: "mock"}, nil
 }
 
 func init() {
-	GithubService = &MockGithubService{}
+	GitService = &services.GitService{
+		Provider: &MockGitProvider{},
+	}
 }
 
 func TestGithubHandlers(t *testing.T) {
@@ -72,7 +67,7 @@ func TestGithubHandlers(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Errorf("GetUserRepositoriesHandler returned wrong status code: got %v want %v", rr.Code, http.StatusOK)
 	}
-	var repos []*github.Repository
+	var repos []services.GitRepository
 	if err := json.NewDecoder(rr.Body).Decode(&repos); err != nil {
 		t.Errorf("GetUserRepositoriesHandler returned invalid JSON: %v", err)
 	}
@@ -88,11 +83,11 @@ func TestGithubHandlers(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Errorf("GetUserInfoHandler returned wrong status code: got %v want %v", rr.Code, http.StatusOK)
 	}
-	var user github.User
+	var user services.GitUser
 	if err := json.NewDecoder(rr.Body).Decode(&user); err != nil {
 		t.Errorf("GetUserInfoHandler returned invalid JSON: %v", err)
 	}
-	if user.GetLogin() == "" {
+	if user.Login == "" {
 		t.Errorf("GetUserInfoHandler returned empty login")
 	}
 

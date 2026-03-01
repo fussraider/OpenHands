@@ -90,3 +90,7 @@ func (a *LLMSecurityAnalyzer) parseResponse(content string) (SecurityRisk, strin
 
 	return risk, reason, nil
 }
+
+func init() {
+	RegisterAnalyzer("llm")
+}

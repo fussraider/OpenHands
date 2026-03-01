@@ -21,6 +21,7 @@ type ConversationInfo struct {
 	Status             ConversationStatus `json:"status"`
 	SelectedRepository string             `json:"selected_repository,omitempty"`
 	SelectedBranch     string             `json:"selected_branch,omitempty"`
+	Trigger            string             `json:"trigger,omitempty"`
 }
 
 type InitSessionRequest struct {
@@ -28,6 +29,7 @@ type InitSessionRequest struct {
 	SelectedBranch           string `json:"selected_branch,omitempty"`
 	InitialUserMsg           string `json:"initial_user_msg,omitempty"`
 	ConversationInstructions string `json:"conversation_instructions,omitempty"`
+	Trigger                  string `json:"trigger,omitempty"`
 }
 
 type ConversationResponse struct {

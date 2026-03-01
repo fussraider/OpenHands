@@ -7,19 +7,19 @@ import (
 )
 
 type GitService struct {
-	githubProvider *GitHubProvider
+	Provider GitProvider // Exported for mocking in tests
 }
 
 func NewGitService(cfg *config.Config) *GitService {
 	return &GitService{
-		githubProvider: NewGitHubProvider(cfg.Github),
+		Provider: NewGitHubProvider(cfg.Github),
 	}
 }
 
 func (s *GitService) GetProvider(ctx context.Context, token string) (GitProvider, error) {
 	// Simple logic: if token starts with "ghp_" or "github_pat_" or just default to GitHub for now.
 	// Real implementation might need more explicit provider selection from request.
-	return s.githubProvider, nil
+	return s.Provider, nil
 }
 
 // Delegate methods to the appropriate provider

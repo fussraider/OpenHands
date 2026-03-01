@@ -79,6 +79,7 @@ func (s *ConversationStore) CreateConversation(req models.InitSessionRequest) (m
 		Status:             models.ConversationStatusStopped, // Initially stopped
 		SelectedRepository: req.Repository,
 		SelectedBranch:     req.SelectedBranch,
+		Trigger:            req.Trigger,
 	}
 
 	s.conversations[id] = conversation
