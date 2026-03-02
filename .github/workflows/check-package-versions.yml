@@ -63,3 +63,18 @@ jobs:
 
           print("\n✅ SUCCESS: No 'rev' fields found. All dependencies are using proper versioned releases.")
           PY
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+
+      - name: Check for direct commits in go.mod
+        run: |
+          if grep -E 'v[0-9]+\.[0-9]+\.[0-9]+-[0-9]{14}-[a-f0-9]{12}' go.mod; then
+             echo "❌ ERROR: go.mod contains pseudo-versions (direct commits). Please use versioned releases."
+             exit 1
+          else
+             echo "✅ SUCCESS: No pseudo-versions found in go.mod."
+          fi

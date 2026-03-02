@@ -1,0 +1,58 @@
+name: Run Go Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ (github.head_ref && github.ref) || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  test-on-linux:
+    name: Go Tests on Linux
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+
+      - name: Build Environment
+        run: make build
+
+      - name: Run Unit Tests
+        run: go test -v -coverprofile=coverage.out ./server/... ./cmd/...
+
+      - name: Store coverage file
+        uses: actions/upload-artifact@v6
+        with:
+          name: coverage-openhands
+          path: coverage.out
+
+  test-enterprise:
+    name: Enterprise Go Unit Tests
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+
+      - name: Run Unit Tests
+        working-directory: ./enterprise
+        run: go test -v -coverprofile=coverage.enterprise.out ./...
+
+      - name: Store coverage file
+        uses: actions/upload-artifact@v6
+        with:
+          name: coverage-enterprise
+          path: enterprise/coverage.enterprise.out

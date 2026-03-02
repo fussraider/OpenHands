@@ -78,3 +78,18 @@ updates:
       - "containers/*"
     schedule:
       interval: "weekly"
+
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 1
+    groups:
+      security-all:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+      version-all:
+        applies-to: "version-updates"
+        patterns:
+          - "*"

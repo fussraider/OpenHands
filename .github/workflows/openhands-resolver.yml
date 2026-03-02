@@ -88,42 +88,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
-          python-version: "3.12"
-      - name: Upgrade pip
-        run: |
-          python -m pip install --upgrade pip
-
-      - name: Get latest versions and create requirements.txt
-        run: |
-          python -m pip index versions openhands-ai > openhands_versions.txt
-          OPENHANDS_VERSION=$(head -n 1 openhands_versions.txt | awk '{print $2}' | tr -d '()')
-
-          # Create a new requirements.txt locally within the workflow, ensuring no reference to the repo's file
-          echo "openhands-ai==${OPENHANDS_VERSION}" > /tmp/requirements.txt
-          cat /tmp/requirements.txt
-
-      - name: Cache pip dependencies
-        if: |
-          !(
-            github.event.label.name == 'fix-me-experimental' ||
-            (
-              (github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') &&
-              contains(github.event.comment.body, '@openhands-agent-exp')
-            ) ||
-            (
-              github.event_name == 'pull_request_review' &&
-              contains(github.event.review.body, '@openhands-agent-exp')
-            )
-          )
-        uses: actions/cache@v5
-        with:
-          path: ${{ env.pythonLocation }}/lib/python3.12/site-packages/*
-          key: ${{ runner.os }}-pip-openhands-resolver-${{ hashFiles('/tmp/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-openhands-resolver-${{ hashFiles('/tmp/requirements.txt') }}
+          go-version: '1.23'
+          cache: true
 
       - name: Check required environment variables
         env:
@@ -204,41 +173,7 @@ jobs:
               body: `[OpenHands](https://github.com/OpenHands/OpenHands) started fixing the ${issueType}! You can monitor the progress [here](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}).`
             });
 
-      - name: Install OpenHands
-        id: install_openhands
-        uses: actions/github-script@v7
-        env:
-          COMMENT_BODY: ${{ github.event.comment.body || '' }}
-          REVIEW_BODY: ${{ github.event.review.body || '' }}
-          LABEL_NAME: ${{ github.event.label.name || '' }}
-          EVENT_NAME: ${{ github.event_name }}
-        with:
-          script: |
-            const commentBody = process.env.COMMENT_BODY.trim();
-            const reviewBody = process.env.REVIEW_BODY.trim();
-            const labelName = process.env.LABEL_NAME.trim();
-            const eventName = process.env.EVENT_NAME.trim();
-            // Check conditions
-            const isExperimentalLabel = labelName === "fix-me-experimental";
-            const isIssueCommentExperimental =
-              (eventName === "issue_comment" || eventName === "pull_request_review_comment") &&
-              commentBody.includes("@openhands-agent-exp");
-            const isReviewCommentExperimental =
-              eventName === "pull_request_review" && reviewBody.includes("@openhands-agent-exp");
 
-            // Set output variable
-            core.setOutput('isExperimental', isExperimentalLabel || isIssueCommentExperimental || isReviewCommentExperimental);
-
-            // Perform package installation
-            if (isExperimentalLabel || isIssueCommentExperimental || isReviewCommentExperimental) {
-              console.log("Installing experimental OpenHands...");
-
-              await exec.exec("pip install git+https://github.com/openhands/openhands.git");
-            } else {
-              console.log("Installing from requirements.txt...");
-
-              await exec.exec("pip install -r /tmp/requirements.txt");
-            }
 
       - name: Attempt to resolve issue
         env:
@@ -251,18 +186,18 @@ jobs:
           LLM_API_VERSION: ${{ inputs.LLM_API_VERSION }}
           PYTHONPATH: ""
         run: |
-          cd /tmp && python -m openhands.resolver.resolve_issue \
-            --selected-repo ${{ github.repository }} \
+          go build -o resolver cmd/resolver/main.go
+          ./resolver \
+            --repo ${{ github.repository }} \
             --issue-number ${{ env.ISSUE_NUMBER }} \
             --issue-type ${{ env.ISSUE_TYPE }} \
             --max-iterations ${{ env.MAX_ITERATIONS }} \
-            --comment-id ${{ env.COMMENT_ID }} \
-            --is-experimental ${{ steps.install_openhands.outputs.isExperimental }}
+            --comment-id ${{ env.COMMENT_ID }}
 
       - name: Check resolution result
         id: check_result
         run: |
-          if cd /tmp && grep -q '"success":true' output/output.jsonl; then
+          if [ -f "output/output.jsonl" ] && grep -q '"success":true' output/output.jsonl; then
             echo "RESOLUTION_SUCCESS=true" >> $GITHUB_OUTPUT
           else
             echo "RESOLUTION_SUCCESS=false" >> $GITHUB_OUTPUT
@@ -273,7 +208,7 @@ jobs:
         if: always() # Upload even if the previous steps fail
         with:
           name: resolver-output
-          path: /tmp/output/output.jsonl
+          path: output/output.jsonl
           retention-days: 30 # Keep the artifact for 30 days
 
       - name: Create draft PR or push branch
@@ -286,17 +221,18 @@ jobs:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
           LLM_API_VERSION: ${{ inputs.LLM_API_VERSION }}
-          PYTHONPATH: ""
         run: |
           if [ "${{ steps.check_result.outputs.RESOLUTION_SUCCESS }}" == "true" ]; then
-            cd /tmp && python -m openhands.resolver.send_pull_request \
+            ./resolver \
+              --mode send-pr \
               --issue-number ${{ env.ISSUE_NUMBER }} \
               --target-branch ${{ env.TARGET_BRANCH }} \
               --pr-type ${{ inputs.pr_type || 'draft' }} \
               --reviewer ${{ github.actor }} | tee pr_result.txt && \
               grep "PR created" pr_result.txt | sed 's/.*\///g' > pr_number.txt
           else
-            cd /tmp && python -m openhands.resolver.send_pull_request \
+            ./resolver \
+              --mode send-pr \
               --issue-number ${{ env.ISSUE_NUMBER }} \
               --pr-type branch \
               --send-on-failure | tee branch_result.txt && \
@@ -318,7 +254,7 @@ jobs:
             let logContent = '';
 
             try {
-              logContent = fs.readFileSync('/tmp/pr_result.txt', 'utf8').trim();
+              logContent = fs.readFileSync('pr_result.txt', 'utf8').trim();
             } catch (error) {
               console.error('Error reading pr_result.txt file:', error);
             }
@@ -361,9 +297,9 @@ jobs:
 
             try {
               if (success) {
-                prNumber = fs.readFileSync('/tmp/pr_number.txt', 'utf8').trim();
+                prNumber = fs.readFileSync('pr_number.txt', 'utf8').trim();
               } else {
-                branchName = fs.readFileSync('/tmp/branch_name.txt', 'utf8').trim();
+                branchName = fs.readFileSync('branch_name.txt', 'utf8').trim();
               }
             } catch (error) {
               console.error('Error reading file:', error);
@@ -373,7 +309,7 @@ jobs:
             try {
               if (!success){
                 // Read result_explanation from JSON file for failed resolution
-                const outputFilePath = path.resolve('/tmp/output/output.jsonl');
+                const outputFilePath = path.resolve('output/output.jsonl');
                 if (fs.existsSync(outputFilePath)) {
                   const outputContent = fs.readFileSync(outputFilePath, 'utf8');
                   const jsonLines = outputContent.split('\n').filter(line => line.trim() !== '');
