@@ -72,7 +72,7 @@ jobs:
 
       - name: Check for direct commits in go.mod
         run: |
-          if grep -E 'v[0-9]+\.[0-9]+\.[0-9]+-[0-9]{14}-[a-f0-9]{12}' go.mod; then
+          if grep -v 'indirect' go.mod | grep -E 'v[0-9]+\.[0-9]+\.[0-9]+-[0-9]{14}-[a-f0-9]{12}'; then
              echo "❌ ERROR: go.mod contains pseudo-versions (direct commits). Please use versioned releases."
              exit 1
           else
