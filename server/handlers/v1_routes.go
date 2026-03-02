@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"openhands-go/server/models"
 	"openhands-go/server/services"
 )
 
@@ -25,6 +26,9 @@ func RegisterV1Routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/sandboxes/{id}/resume", V1ResumeSandboxHandler)
 	mux.HandleFunc("DELETE /api/v1/sandboxes/{id}", V1DeleteSandboxHandler)
 
+	// Web Client Settings
+	mux.HandleFunc("GET /api/v1/web-client/config", GetWebClientConfigHandler)
+
 	// Events
 	mux.HandleFunc("GET /api/v1/conversation/{conversation_id}/events/search", V1SearchEventsHandler)
 	mux.HandleFunc("GET /api/v1/conversation/{conversation_id}/events", V1BatchGetEventsHandler)
@@ -34,7 +38,7 @@ func RegisterV1Routes(mux *http.ServeMux) {
 func V1SearchSandboxesHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"items": []interface{}{},
+		"items":        []interface{}{},
 		"next_page_id": nil,
 	})
 }
@@ -63,7 +67,7 @@ func V1StartSandboxHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
-		"id": sandboxID,
+		"id":     sandboxID,
 		"status": "RUNNING",
 	})
 }
@@ -105,7 +109,7 @@ func V1SearchEventsHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Mock empty page format expected by frontend
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"items": []interface{}{},
+		"items":        []interface{}{},
 		"next_page_id": nil,
 	})
 }
@@ -130,4 +134,24 @@ func V1CountEventsHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(0)
+}
+
+func GetWebClientConfigHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	config := models.WebClientConfig{
+		AppMode: "oss",
+		FeatureFlags: models.WebClientFeatureFlags{
+			EnableBilling:   false,
+			HideLLMSettings: false,
+			EnableJira:      false,
+			EnableJiraDC:    false,
+			EnableLinear:    false,
+		},
+		ProvidersConfigured: []string{},
+		FaultyModels:        []string{},
+		UpdatedAt:           "2025-01-01T00:00:00Z", // Can be dynamic or static
+	}
+
+	json.NewEncoder(w).Encode(config)
 }
