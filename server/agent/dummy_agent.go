@@ -5,11 +5,8 @@ import (
 	"openhands-go/server/config"
 	"openhands-go/server/events"
 	"openhands-go/server/llm"
-	"openhands-go/server/runtime"
-)
-
-import (
 	"openhands-go/server/models"
+	"openhands-go/server/runtime"
 )
 
 // DummyAgent is a minimal agent primarily used for testing or dry-runs without LLM interaction.
