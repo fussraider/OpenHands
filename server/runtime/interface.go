@@ -15,6 +15,12 @@ type Runtime interface {
 	// GetCwd returns the current working directory of the shell session
 	GetCwd(ctx context.Context) (string, error)
 
+	// CopyFileToContainer copies a local file to the runtime container
+	CopyFileToContainer(ctx context.Context, hostPath string, containerPath string) error
+
+	// CopyFileFromContainer copies a file from the runtime container to the local host
+	CopyFileFromContainer(ctx context.Context, containerPath string, hostPath string) error
+
 	// Future methods for parity with Python
 	// RunAction(action Action) (Observation, error)
 	// ReadFile(path string) ([]byte, error)

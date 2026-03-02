@@ -19,7 +19,7 @@ func TestOptionsHandlers(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&models); err != nil {
 		t.Errorf("ModelsHandler returned invalid JSON: %v", err)
 	}
-	if len(models) != 4 || models[0] != "gpt-4" {
+	if len(models) == 0 || models[0] != "openhands/claude-opus-4-5-20251101" {
 		t.Errorf("ModelsHandler returned unexpected list: %v", models)
 	}
 

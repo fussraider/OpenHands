@@ -1,9 +1,13 @@
 package runtime
 
 import (
+	"archive/tar"
+	"bytes"
 	"context"
 	"io"
 	"openhands-go/server/config"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/docker/docker/api/types"
@@ -47,7 +51,7 @@ func (r *DockerRuntime) ensureContainer(ctx context.Context) error {
 		}
 		r.containerID = resp.ID
 
-		if err := r.client.ContainerStart(ctx, r.containerID, types.ContainerStartOptions{}); err != nil {
+		if err := r.client.ContainerStart(ctx, r.containerID, container.StartOptions{}); err != nil {
 			return err
 		}
 	}
@@ -82,7 +86,7 @@ func (r *DockerRuntime) startDockerShell(ctx context.Context) error {
 	}
 
 	// Start bash in container
-	execConfig := types.ExecConfig{
+	execConfig := container.ExecOptions{
 		Cmd:          []string{"bash", "--noprofile", "--norc"},
 		AttachStdout: true,
 		AttachStderr: true,
@@ -96,7 +100,7 @@ func (r *DockerRuntime) startDockerShell(ctx context.Context) error {
 		return err
 	}
 
-	resp, err := r.client.ContainerExecAttach(ctx, execIDResp.ID, types.ExecStartCheck{
+	resp, err := r.client.ContainerExecAttach(ctx, execIDResp.ID, container.ExecAttachOptions{
 		Tty: true,
 	})
 	if err != nil {
@@ -116,7 +120,7 @@ func (r *DockerRuntime) Start(ctx context.Context, command string, args ...strin
 	}
 
 	fullCmd := append([]string{command}, args...)
-	execConfig := types.ExecConfig{
+	execConfig := container.ExecOptions{
 		Cmd:          fullCmd,
 		AttachStdout: true,
 		AttachStderr: true,
@@ -129,7 +133,7 @@ func (r *DockerRuntime) Start(ctx context.Context, command string, args ...strin
 		return err
 	}
 
-	resp, err := r.client.ContainerExecAttach(ctx, execIDResp.ID, types.ExecStartCheck{
+	resp, err := r.client.ContainerExecAttach(ctx, execIDResp.ID, container.ExecAttachOptions{
 		Tty: true,
 	})
 	if err != nil {
@@ -179,6 +183,69 @@ func (r *DockerRuntime) GetCwd(ctx context.Context) (string, error) {
 		return r.shell.GetCwd(), nil
 	}
 	return "/workspace", nil
+}
+
+func (r *DockerRuntime) CopyFileToContainer(ctx context.Context, hostPath string, containerPath string) error {
+	file, err := os.Open(hostPath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	stat, err := file.Stat()
+	if err != nil {
+		return err
+	}
+
+	// Create an in-memory tar buffer
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+
+	hdr := &tar.Header{
+		Name: filepath.Base(containerPath),
+		Mode: 0644,
+		Size: stat.Size(),
+	}
+
+	if err := tw.WriteHeader(hdr); err != nil {
+		return err
+	}
+
+	if _, err := io.Copy(tw, file); err != nil {
+		return err
+	}
+
+	if err := tw.Close(); err != nil {
+		return err
+	}
+
+	dir := filepath.Dir(containerPath)
+	return r.client.CopyToContainer(ctx, r.containerID, dir, &buf, container.CopyToContainerOptions{
+		AllowOverwriteDirWithFile: true,
+	})
+}
+
+func (r *DockerRuntime) CopyFileFromContainer(ctx context.Context, containerPath string, hostPath string) error {
+	reader, _, err := r.client.CopyFromContainer(ctx, r.containerID, containerPath)
+	if err != nil {
+		return err
+	}
+	defer reader.Close()
+
+	tr := tar.NewReader(reader)
+	_, err = tr.Next() // Get first file in archive
+	if err != nil {
+		return err
+	}
+
+	destFile, err := os.Create(hostPath)
+	if err != nil {
+		return err
+	}
+	defer destFile.Close()
+
+	_, err = io.Copy(destFile, tr)
+	return err
 }
 
 func (r *DockerRuntime) Close() error {

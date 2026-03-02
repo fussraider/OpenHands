@@ -2,9 +2,11 @@ package runtime
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/creack/pty"
@@ -105,6 +107,80 @@ func (r *LocalRuntime) GetCwd(ctx context.Context) (string, error) {
 		return r.shell.GetCwd(), nil
 	}
 	return r.workDir, nil
+}
+
+func (r *LocalRuntime) CopyFileToContainer(ctx context.Context, hostPath string, containerPath string) error {
+	// For local runtime, it's just a local file copy
+	sourceFileStat, err := os.Stat(hostPath)
+	if err != nil {
+		return err
+	}
+
+	if !sourceFileStat.Mode().IsRegular() {
+		return fmt.Errorf("%s is not a regular file", hostPath)
+	}
+
+	source, err := os.Open(hostPath)
+	if err != nil {
+		return err
+	}
+	defer source.Close()
+
+	// Handle relative container paths using current working directory
+	targetPath := containerPath
+	if !filepath.IsAbs(containerPath) {
+		cwd, _ := r.GetCwd(ctx)
+		targetPath = filepath.Join(cwd, containerPath)
+	}
+
+	// Ensure the target directory exists
+	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+		return err
+	}
+
+	destination, err := os.Create(targetPath)
+	if err != nil {
+		return err
+	}
+	defer destination.Close()
+
+	_, err = io.Copy(destination, source)
+	return err
+}
+
+func (r *LocalRuntime) CopyFileFromContainer(ctx context.Context, containerPath string, hostPath string) error {
+	// For local runtime, it's just a local file copy
+
+	// Handle relative container paths using current working directory
+	sourcePath := containerPath
+	if !filepath.IsAbs(containerPath) {
+		cwd, _ := r.GetCwd(ctx)
+		sourcePath = filepath.Join(cwd, containerPath)
+	}
+
+	sourceFileStat, err := os.Stat(sourcePath)
+	if err != nil {
+		return err
+	}
+
+	if !sourceFileStat.Mode().IsRegular() {
+		return fmt.Errorf("%s is not a regular file", sourcePath)
+	}
+
+	source, err := os.Open(sourcePath)
+	if err != nil {
+		return err
+	}
+	defer source.Close()
+
+	destination, err := os.Create(hostPath)
+	if err != nil {
+		return err
+	}
+	defer destination.Close()
+
+	_, err = io.Copy(destination, source)
+	return err
 }
 
 func (r *LocalRuntime) Close() error {

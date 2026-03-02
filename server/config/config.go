@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/pelletier/go-toml/v2"
@@ -82,8 +83,22 @@ func LoadConfig() error {
 		},
 	}
 
+	// Load from global ~/.openhands/config.toml
+	homeDir, _ := os.UserHomeDir()
+	if homeDir != "" {
+		globalConfigPath := filepath.Join(homeDir, ".openhands", "config.toml")
+		data, err := os.ReadFile(globalConfigPath)
+		if err == nil {
+			if err := toml.Unmarshal(data, AppConfig); err != nil {
+				// Don't fail if we can't parse global config, just ignore it or log
+			}
+		}
+	}
+
+	// Load from local config.toml
 	data, err := os.ReadFile("config.toml")
 	if err == nil {
+		// We unmarshal again into AppConfig, effectively deep-merging local into global
 		if err := toml.Unmarshal(data, AppConfig); err != nil {
 			return err
 		}
