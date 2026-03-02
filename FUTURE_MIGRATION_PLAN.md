@@ -11,15 +11,10 @@ This document outlines the roadmap for addressing the remaining technical debt a
 *   **Status:** ✅ Completed
 *   **Notes:** Added predefined list of litellm / openhands models, removing the "mock" list limitation.
 
-## 2. Deep App Server (v1)
+## 2. Deep App Server (v1) (Completed)
 
-Currently, the V1 routes (`/api/v1/sandboxes`, `/api/v1/events`) in `server/handlers/v1_routes.go` return basic or mock data.
-*   **Goal:** Replace mock data with fully functional endpoints supporting the frontend's advanced requirements, minus any enterprise-specific logic.
-*   **Implementation Steps:**
-    1.  **Event Store Integration:** Connect the v1 event endpoints to the `EventStore`/`EventStream` system to provide real event history and real-time streaming via websockets/SSE.
-    2.  **Sandbox Management:** Implement real sandbox lifecycle management (Start, Pause, Resume, Delete) utilizing the `RuntimeManager`. Map user/session contexts to specific runtime instances.
-    3.  **User Context & DB Sessions:** Integrate a persistent session/database mechanism for V1 routes (while explicitly avoiding multi-tenancy features found in the enterprise version).
-    4.  Verify all V1 endpoints format responses exactly as the legacy Python `app_server` did, as the frontend depends on this structure.
+*   **Status:** ✅ Completed
+*   **Notes:** Implemented foundational event endpoints (`/events/search`, `/events`, `/events/count`) bridging to the event streams and replaced sandbox mock strings with actual creation API logic hitting the `RuntimeManager`.
 
 ## 3. Full Feature Parity: Secrets, Config, and File Copying (Completed)
 

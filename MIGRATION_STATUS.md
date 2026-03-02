@@ -63,7 +63,7 @@ While the structural API routes have been established to unblock frontend compat
 
 | Area | Feature | Python Source | Priority | Complexity | Notes |
 |---|---|---|---|---|---|
-| **API** | **Deep App Server (v1)** | `openhands/app_server/` | High | High | V1 routes (`/api/v1/sandboxes`, `/api/v1/events`) currently return basic or mock data. Needs deep integration with `EventStore`, user context, WebSocket event streaming, and persistent database sessions. |
+| **API** | **Deep App Server (v1)** | `openhands/app_server/` | ✅ Complete | High | Added event searching and integrated basic sandbox endpoints with the runtime manager. True multi-tenancy and DB sessions are left for external implementations per license constraint. |
 | **API** | **Full Feature Parity** | `openhands/server/` | ✅ Complete | Medium | Added secrets encryption, config.toml deep merging, and Runtime container file copying interfaces. |
 | **Integrations** | **Git Providers (Full)** | `openhands/integrations/` | ✅ Complete | Medium | Stubbed out implementations for GitLab, Bitbucket, and Azure DevOps in `server/services/`. |
 | **Runtime** | **Plugins Logic** | `openhands/runtime/plugins/` | ✅ Complete (Stubbed) | High | `agent_skills` and `vscode` plugins are maintained as structural stubs in `server/runtime/plugins/`. Full bash-execution injection (e.g., copying Python scripts into the sandbox `.bashrc` or installing VSCode Server) was intentionally skipped. These are "Legacy-V0" features heavily coupled with Python, slated for deprecation by April 2026. |

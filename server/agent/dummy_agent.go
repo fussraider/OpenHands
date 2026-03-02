@@ -6,7 +6,10 @@ import (
 	"openhands-go/server/events"
 	"openhands-go/server/llm"
 	"openhands-go/server/runtime"
+)
 
+import (
+	"openhands-go/server/models"
 )
 
 // DummyAgent is a minimal agent primarily used for testing or dry-runs without LLM interaction.
@@ -28,10 +31,16 @@ func (a *DummyAgent) InitPlugins(ctx context.Context) error {
 	return nil
 }
 
-// In the Python backend, the DummyAgent skips the LLM loop entirely
-// and immediately emits an AgentFinishAction with a canned response.
-// Here we rely on the system prompt to guide the LLM to finish, but a truer
-// port would intercept the Step() function to skip the LLM call entirely.
+// Step overrides the base agent step to immediately return a finish action
+// mirroring the Python DummyAgent behavior of bypassing the LLM entirely.
+func (a *DummyAgent) Step(ctx context.Context) (interface{}, error) {
+	finishAction := models.AgentFinishAction{
+		Action:  models.ActionTypeAgentFinish,
+		Outputs: map[string]string{"response": "Dummy agent finished immediately."},
+	}
+
+	return finishAction, nil
+}
 
 func init() {
 	RegisterAgent("DummyAgent")
