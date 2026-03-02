@@ -25,6 +25,8 @@ func (m *MockRuntime) Write(p []byte) (n int, err error) { return len(p), nil }
 func (m *MockRuntime) Read(p []byte) (n int, err error)  { return 0, nil }
 func (m *MockRuntime) Close() error                      { return nil }
 func (m *MockRuntime) GetCwd(ctx context.Context) (string, error) { return "/mock/cwd", nil }
+func (m *MockRuntime) CopyFileToContainer(ctx context.Context, hostPath string, containerPath string) error { return nil }
+func (m *MockRuntime) CopyFileFromContainer(ctx context.Context, containerPath string, hostPath string) error { return nil }
 
 func TestEventsToMessages(t *testing.T) {
 	// Setup
