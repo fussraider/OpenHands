@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"openhands-go/server/models"
 	"openhands-go/server/services"
+	"os"
 )
 
 // The v1 API in Python (app_server) handles advanced enterprise-like features
@@ -139,18 +140,35 @@ func V1CountEventsHandler(w http.ResponseWriter, r *http.Request) {
 func GetWebClientConfigHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
+	// Read dynamic config from environment similarly to the legacy Python code
+	githubClientID := os.Getenv("GITHUB_APP_CLIENT_ID")
+	if githubClientID == "" {
+		githubClientID = os.Getenv("GITHUB_CLIENT_ID")
+	}
+
+	posthogKey := os.Getenv("POSTHOG_CLIENT_KEY")
+	if posthogKey == "" {
+		// Use the same fallback default as openhands.server.config.server_config
+		posthogKey = "phc_3ESMmY9SgqEAGBB6sMGK5ayYHkeUuknH2vP6FmWH9RA"
+	}
+
+	enableBilling := os.Getenv("ENABLE_BILLING") == "true"
+	hideLLMSettings := os.Getenv("HIDE_LLM_SETTINGS") == "true"
+
 	config := models.WebClientConfig{
-		AppMode: "oss",
+		AppMode:          "oss",
+		PosthogClientKey: &posthogKey,
+		GithubAppSlug:    &githubClientID,
 		FeatureFlags: models.WebClientFeatureFlags{
-			EnableBilling:   false,
-			HideLLMSettings: false,
+			EnableBilling:   enableBilling,
+			HideLLMSettings: hideLLMSettings,
 			EnableJira:      false,
 			EnableJiraDC:    false,
 			EnableLinear:    false,
 		},
 		ProvidersConfigured: []string{},
 		FaultyModels:        []string{},
-		UpdatedAt:           "2025-01-01T00:00:00Z", // Can be dynamic or static
+		UpdatedAt:           "2025-01-01T00:00:00Z",
 	}
 
 	json.NewEncoder(w).Encode(config)
