@@ -184,13 +184,12 @@ func GetRepositoryMicroagentsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	repository := r.PathValue("repository_name")
-	parts := strings.Split(repository, "/")
-	if len(parts) != 2 {
+	owner := r.PathValue("owner")
+	repo := r.PathValue("repo")
+	if owner == "" || repo == "" {
 		http.Error(w, "Invalid repository format", http.StatusBadRequest)
 		return
 	}
-	owner, repo := parts[0], parts[1]
 
 	microagents, err := GitService.GetMicroagents(r.Context(), token, owner, repo)
 	if err != nil {
@@ -209,7 +208,8 @@ func GetRepositoryMicroagentContentHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	repository := r.PathValue("repository_name")
+	owner := r.PathValue("owner")
+	repo := r.PathValue("repo")
 	filePath := r.URL.Query().Get("file_path")
 
 	if filePath == "" {
@@ -217,12 +217,10 @@ func GetRepositoryMicroagentContentHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	parts := strings.Split(repository, "/")
-	if len(parts) != 2 {
+	if owner == "" || repo == "" {
 		http.Error(w, "Invalid repository format", http.StatusBadRequest)
 		return
 	}
-	owner, repo := parts[0], parts[1]
 
 	content, err := GitService.GetMicroagentContent(r.Context(), token, owner, repo, filePath)
 	if err != nil {

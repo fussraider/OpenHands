@@ -78,10 +78,10 @@ func main() {
 	mux.HandleFunc("GET /api/user/search/repositories", handlers.SearchRepositoriesHandler)
 	mux.HandleFunc("GET /api/user/search/branches", handlers.SearchBranchesHandler)
 	mux.HandleFunc("GET /api/user/repository/branches", handlers.GetRepositoryBranchesHandler)
-	// Use wildcard for repository_name to allow slashes (owner/repo)
-	// Go 1.22+ supports wildcard {name...}
-	mux.HandleFunc("GET /api/user/repository/{repository_name...}/microagents", handlers.GetRepositoryMicroagentsHandler)
-	mux.HandleFunc("GET /api/user/repository/{repository_name...}/microagents/content", handlers.GetRepositoryMicroagentContentHandler)
+	// Go 1.22+ supports wildcard {name...}, but it must be at the end of the path.
+	// We use {owner}/{repo} to avoid the panic.
+	mux.HandleFunc("GET /api/user/repository/{owner}/{repo}/microagents", handlers.GetRepositoryMicroagentsHandler)
+	mux.HandleFunc("GET /api/user/repository/{owner}/{repo}/microagents/content", handlers.GetRepositoryMicroagentContentHandler)
 
 	// MCP Mount
 	mux.HandleFunc("/mcp/", handlers.MCPSSEHandler)
