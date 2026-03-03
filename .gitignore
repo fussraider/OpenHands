@@ -269,5 +269,5 @@ conversations.json
 server.log
 
 # go build binaries
-server
-cli
+/server
+/cli
