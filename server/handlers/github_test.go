@@ -112,7 +112,8 @@ func TestGithubHandlers(t *testing.T) {
 	// Test Microagent Handlers
 	req, _ = http.NewRequest("GET", "/api/user/repository/owner/repo/microagents", nil)
 	req.Header.Set("Authorization", tokenHeader)
-	req.SetPathValue("repository_name", "owner/repo")
+	req.SetPathValue("owner", "owner")
+	req.SetPathValue("repo", "repo")
 
 	rr = httptest.NewRecorder()
 	http.HandlerFunc(GetRepositoryMicroagentsHandler).ServeHTTP(rr, req)
@@ -122,7 +123,8 @@ func TestGithubHandlers(t *testing.T) {
 
 	req, _ = http.NewRequest("GET", "/api/user/repository/owner/repo/microagents/content?file_path=agent.md", nil)
 	req.Header.Set("Authorization", tokenHeader)
-	req.SetPathValue("repository_name", "owner/repo")
+	req.SetPathValue("owner", "owner")
+	req.SetPathValue("repo", "repo")
 	rr = httptest.NewRecorder()
 	http.HandlerFunc(GetRepositoryMicroagentContentHandler).ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {

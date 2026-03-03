@@ -78,7 +78,7 @@ def test_nodejs_22_version(temp_dir, runtime_cls, base_container_image):
 def test_go_version(temp_dir, runtime_cls, base_container_image):
     """Make sure Go is available in bash."""
     if base_container_image not in [
-        'golang:1.23-bookworm',
+        'golang:1.24-bookworm',
     ]:
         pytest.skip('This test is only for go-related images')
 
@@ -91,6 +91,6 @@ def test_go_version(temp_dir, runtime_cls, base_container_image):
     obs = runtime.run_action(action)
     logger.info(obs, extra={'msg_type': 'OBSERVATION'})
     assert obs.exit_code == 0
-    assert 'go1.23' in obs.content  # Check for specific version
+    assert 'go1.24' in obs.content  # Check for specific version
 
     _close_test_runtime(runtime)

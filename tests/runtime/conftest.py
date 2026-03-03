@@ -196,7 +196,7 @@ def base_container_image(request):
         if request.param is None:
             request.param = pytest.param(
                 'nikolaik/python-nodejs:python3.12-nodejs22',
-                'golang:1.23-bookworm',
+                'golang:1.24-bookworm',
             )
     print(f'Container image: {request.param}')
     return request.param

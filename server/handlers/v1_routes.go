@@ -3,7 +3,9 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"openhands-go/server/models"
 	"openhands-go/server/services"
+	"os"
 )
 
 // The v1 API in Python (app_server) handles advanced enterprise-like features
@@ -25,6 +27,9 @@ func RegisterV1Routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/sandboxes/{id}/resume", V1ResumeSandboxHandler)
 	mux.HandleFunc("DELETE /api/v1/sandboxes/{id}", V1DeleteSandboxHandler)
 
+	// Web Client Settings
+	mux.HandleFunc("GET /api/v1/web-client/config", GetWebClientConfigHandler)
+
 	// Events
 	mux.HandleFunc("GET /api/v1/conversation/{conversation_id}/events/search", V1SearchEventsHandler)
 	mux.HandleFunc("GET /api/v1/conversation/{conversation_id}/events", V1BatchGetEventsHandler)
@@ -34,7 +39,7 @@ func RegisterV1Routes(mux *http.ServeMux) {
 func V1SearchSandboxesHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"items": []interface{}{},
+		"items":        []interface{}{},
 		"next_page_id": nil,
 	})
 }
@@ -63,7 +68,7 @@ func V1StartSandboxHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
-		"id": sandboxID,
+		"id":     sandboxID,
 		"status": "RUNNING",
 	})
 }
@@ -105,7 +110,7 @@ func V1SearchEventsHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Mock empty page format expected by frontend
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"items": []interface{}{},
+		"items":        []interface{}{},
 		"next_page_id": nil,
 	})
 }
@@ -130,4 +135,41 @@ func V1CountEventsHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(0)
+}
+
+func GetWebClientConfigHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Read dynamic config from environment similarly to the legacy Python code
+	githubClientID := os.Getenv("GITHUB_APP_CLIENT_ID")
+	if githubClientID == "" {
+		githubClientID = os.Getenv("GITHUB_CLIENT_ID")
+	}
+
+	posthogKey := os.Getenv("POSTHOG_CLIENT_KEY")
+	if posthogKey == "" {
+		// Use the same fallback default as openhands.server.config.server_config
+		posthogKey = "phc_3ESMmY9SgqEAGBB6sMGK5ayYHkeUuknH2vP6FmWH9RA"
+	}
+
+	enableBilling := os.Getenv("ENABLE_BILLING") == "true"
+	hideLLMSettings := os.Getenv("HIDE_LLM_SETTINGS") == "true"
+
+	config := models.WebClientConfig{
+		AppMode:          "oss",
+		PosthogClientKey: &posthogKey,
+		GithubAppSlug:    &githubClientID,
+		FeatureFlags: models.WebClientFeatureFlags{
+			EnableBilling:   enableBilling,
+			HideLLMSettings: hideLLMSettings,
+			EnableJira:      false,
+			EnableJiraDC:    false,
+			EnableLinear:    false,
+		},
+		ProvidersConfigured: []string{},
+		FaultyModels:        []string{},
+		UpdatedAt:           "2025-01-01T00:00:00Z",
+	}
+
+	json.NewEncoder(w).Encode(config)
 }
