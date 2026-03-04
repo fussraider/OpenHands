@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"openhands-go/server/config"
 	"openhands-go/server/models"
 	"openhands-go/server/services"
 	"openhands-go/server/store"
@@ -13,6 +14,12 @@ import (
 )
 
 func init() {
+	config.AppConfig = &config.Config{
+		AppMode: "oss",
+		Sandbox: config.SandboxConfig{
+			Runtime: "local",
+		},
+	}
 	f, _ := os.CreateTemp("", "conversations.json")
 	f.Close()
 	ConversationStore = store.NewConversationStore(f.Name())

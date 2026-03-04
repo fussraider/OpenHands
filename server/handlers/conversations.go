@@ -12,6 +12,9 @@ var ConversationStore *store.ConversationStore
 
 func SearchConversationsHandler(w http.ResponseWriter, r *http.Request) {
 	conversations := ConversationStore.ListConversations()
+	if conversations == nil {
+		conversations = []models.ConversationInfo{} // Ensure we return [] instead of null
+	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(conversations)
 }
