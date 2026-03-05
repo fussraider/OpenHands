@@ -15,8 +15,14 @@ func SearchConversationsHandler(w http.ResponseWriter, r *http.Request) {
 	if conversations == nil {
 		conversations = []models.ConversationInfo{} // Ensure we return [] instead of null
 	}
+
+	response := map[string]interface{}{
+		"results":      conversations,
+		"next_page_id": nil,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(conversations)
+	json.NewEncoder(w).Encode(response)
 }
 
 func NewConversationHandler(w http.ResponseWriter, r *http.Request) {

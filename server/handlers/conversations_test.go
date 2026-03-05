@@ -84,12 +84,17 @@ func TestSearchConversationsHandler(t *testing.T) {
 			status, http.StatusOK)
 	}
 
-	var conversations []models.ConversationInfo
-	if err := json.NewDecoder(rr.Body).Decode(&conversations); err != nil {
+	var response map[string]interface{}
+	if err := json.NewDecoder(rr.Body).Decode(&response); err != nil {
 		t.Errorf("handler returned invalid JSON: %v", err)
 	}
 
-	if len(conversations) == 0 {
+	results, ok := response["results"].([]interface{})
+	if !ok {
+		t.Errorf("handler returned JSON missing 'results' array")
+	}
+
+	if len(results) == 0 {
 		t.Errorf("handler returned empty list")
 	}
 }
