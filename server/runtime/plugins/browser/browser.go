@@ -35,8 +35,11 @@ func (p *BrowserPlugin) Init(ctx context.Context, rt runtime.Runtime) error {
 		return nil
 	}
 
-	// Ideally we should install drivers, but we assume environment has them or we skip.
-	// playwright.Install()
+	// Install drivers if missing (needed for playwright to run if not already installed globally)
+	err := playwright.Install()
+	if err != nil {
+		fmt.Printf("Warning: failed to install playwright drivers: %v\n", err)
+	}
 
 	pw, err := playwright.Run()
 	if err != nil {
