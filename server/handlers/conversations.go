@@ -3,6 +3,8 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"log/slog"
 	"net/http"
 	"openhands-go/server/models"
 	"openhands-go/server/store"
@@ -32,12 +34,18 @@ func GetWebHostsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// MVP Mock Runtime Type
-	slog.Debug("Runtime type: LocalMock")
-	slog.Debug("Runtime hosts: {}")
+	hosts := map[string]interface{}{}
+	if RuntimeManager != nil {
+		rt, err := RuntimeManager.GetRuntime(id)
+		if err == nil {
+			slog.Debug("Runtime type", "type", fmt.Sprintf("%T", rt))
+			hosts = rt.GetWebHosts()
+			slog.Debug("Runtime hosts", "hosts", hosts)
+		}
+	}
 
 	response := map[string]interface{}{
-		"hosts": map[string]interface{}{},
+		"hosts": hosts,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -190,11 +198,23 @@ func GetVSCodeURLHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	slog.Debug("Runtime type: LocalMock")
-	slog.Debug("Runtime VSCode URL: nil")
+	var vscodeURL *string = nil
+
+	if RuntimeManager != nil {
+		rt, err := RuntimeManager.GetRuntime(id)
+		if err == nil {
+			slog.Debug("Runtime type", "type", fmt.Sprintf("%T", rt))
+			vscodeURL = rt.GetVSCodeURL()
+			if vscodeURL != nil {
+				slog.Debug("Runtime VSCode URL", "url", *vscodeURL)
+			} else {
+				slog.Debug("Runtime VSCode URL", "url", "nil")
+			}
+		}
+	}
 
 	response := map[string]interface{}{
-		"vscode_url": nil,
+		"vscode_url": vscodeURL,
 		"error":      "",
 	}
 

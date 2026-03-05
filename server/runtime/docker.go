@@ -248,6 +248,16 @@ func (r *DockerRuntime) CopyFileFromContainer(ctx context.Context, containerPath
 	return err
 }
 
+func (r *DockerRuntime) GetVSCodeURL() *string {
+	// Not implemented natively in basic Go Docker driver yet.
+	return nil
+}
+
+func (r *DockerRuntime) GetWebHosts() map[string]interface{} {
+	// Not implemented natively in basic Go Docker driver yet.
+	return make(map[string]interface{})
+}
+
 func (r *DockerRuntime) Close() error {
 	var firstErr error
 	if r.shell != nil {

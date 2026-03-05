@@ -183,6 +183,16 @@ func (r *LocalRuntime) CopyFileFromContainer(ctx context.Context, containerPath 
 	return err
 }
 
+func (r *LocalRuntime) GetVSCodeURL() *string {
+	// Not natively supported in basic mock local runtime yet.
+	return nil
+}
+
+func (r *LocalRuntime) GetWebHosts() map[string]interface{} {
+	// Not natively supported in basic mock local runtime yet.
+	return make(map[string]interface{})
+}
+
 func (r *LocalRuntime) Close() error {
 	var firstErr error
 	if r.shell != nil {

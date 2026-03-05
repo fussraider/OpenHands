@@ -9,7 +9,9 @@ import (
 
 // GetMicroagentManagementConversationsHandler returns conversations filtered for microagent management
 func GetMicroagentManagementConversationsHandler(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("V1 conversation service not available: using mock local fallback")
+	// In Python this tries app_conversation_service and logs if unavailable.
+	// We only have the ConversationStore for now.
+	slog.Debug("V1 conversation service not available", "error", "not implemented in MVP, falling back to ConversationStore")
 	selectedRepository := r.URL.Query().Get("selected_repository")
 
 	// Default to returning all conversations for now if no repo provided,
