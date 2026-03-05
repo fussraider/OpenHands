@@ -56,6 +56,7 @@ func main() {
 
 	mux.HandleFunc("GET /api/conversations/{id}/list-files", handlers.ListFilesHandler)
 	mux.HandleFunc("GET /api/conversations/{id}/select-file", handlers.SelectFileHandler)
+	mux.HandleFunc("POST /api/conversations/{id}/upload-files", handlers.UploadFilesHandler)
 
 	mux.HandleFunc("GET /api/conversations/{id}/trajectory", handlers.GetTrajectoryHandler)
 	mux.HandleFunc("POST /api/conversations/{id}/submit-feedback", handlers.SubmitFeedbackHandler)

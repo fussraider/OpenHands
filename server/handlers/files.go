@@ -92,6 +92,85 @@ func ListFilesHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(fileList)
 }
 
+// UploadFilesHandler handles file uploads to the workspace
+func UploadFilesHandler(w http.ResponseWriter, r *http.Request) {
+	// Parse multipart form, 10MB max memory
+	err := r.ParseMultipartForm(10 << 20)
+	if err != nil {
+		http.Error(w, "Failed to parse multipart form", http.StatusBadRequest)
+		return
+	}
+
+	files := r.MultipartForm.File["files"]
+	if len(files) == 0 {
+		http.Error(w, "No files uploaded", http.StatusBadRequest)
+		return
+	}
+
+	// Ensure workspace dir exists
+	os.MkdirAll(workspaceDir, 0755)
+
+	var uploadedFiles []string
+	var skippedFiles []map[string]string
+
+	for _, fileHeader := range files {
+		file, err := fileHeader.Open()
+		if err != nil {
+			skippedFiles = append(skippedFiles, map[string]string{
+				"name":   fileHeader.Filename,
+				"reason": "Failed to open file: " + err.Error(),
+			})
+			continue
+		}
+
+		// Ensure safe path to prevent directory traversal in filename
+		safeName := filepath.Base(fileHeader.Filename)
+		destPath := filepath.Join(workspaceDir, safeName)
+
+		destFile, err := os.Create(destPath)
+		if err != nil {
+			skippedFiles = append(skippedFiles, map[string]string{
+				"name":   safeName,
+				"reason": "Failed to create file: " + err.Error(),
+			})
+			file.Close()
+			continue
+		}
+
+		_, err = destFile.ReadFrom(file)
+		if err != nil {
+			skippedFiles = append(skippedFiles, map[string]string{
+				"name":   safeName,
+				"reason": "Failed to write file: " + err.Error(),
+			})
+		} else {
+			uploadedFiles = append(uploadedFiles, safeName)
+		}
+
+		destFile.Close()
+		file.Close()
+	}
+
+	// For MVP, if we have a docker runtime, ideally we'd use CopyFileToContainer.
+	// But since ListFilesHandler and SelectFileHandler read from workspaceDir directly,
+	// and the Docker container mounts the workspaceDir, saving locally to workspaceDir is sufficient.
+
+	if uploadedFiles == nil {
+		uploadedFiles = []string{}
+	}
+	if skippedFiles == nil {
+		skippedFiles = []map[string]string{}
+	}
+
+	response := map[string]interface{}{
+		"uploaded_files": uploadedFiles,
+		"skipped_files":  skippedFiles,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
 // SelectFileHandler returns file content
 func SelectFileHandler(w http.ResponseWriter, r *http.Request) {
 	file := r.URL.Query().Get("file")
