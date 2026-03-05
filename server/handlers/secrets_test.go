@@ -11,11 +11,13 @@ import (
 func TestSecretsHandlers(t *testing.T) {
 	// 1. Store a secret
 	reqBody := struct {
-		Key   string `json:"key"`
-		Value string `json:"value"`
+		Name        string `json:"name"`
+		Value       string `json:"value"`
+		Description string `json:"description"`
 	}{
-		Key:   "API_KEY",
-		Value: "12345",
+		Name:        "API_KEY",
+		Value:       "12345",
+		Description: "A test API key",
 	}
 	body, _ := json.Marshal(reqBody)
 	req, err := http.NewRequest("POST", "/api/secrets", bytes.NewBuffer(body))
@@ -28,9 +30,9 @@ func TestSecretsHandlers(t *testing.T) {
 
 	handler.ServeHTTP(rr, req)
 
-	if status := rr.Code; status != http.StatusOK {
+	if status := rr.Code; status != http.StatusCreated {
 		t.Errorf("StoreSecretHandler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
+			status, http.StatusCreated)
 	}
 
 	// 2. Get secrets
@@ -71,13 +73,38 @@ func TestSecretsHandlers(t *testing.T) {
 		t.Errorf("API_KEY not found in secrets: %v", response.CustomSecrets)
 	}
 
+	// 2.5 Update secret
+	updateReqBody := struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+	}{
+		Name:        "API_KEY_UPDATED",
+		Description: "Updated description",
+	}
+	body, _ = json.Marshal(updateReqBody)
+	req, err = http.NewRequest("PUT", "/api/secrets/API_KEY", bytes.NewBuffer(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.SetPathValue("id", "API_KEY")
+
+	rr = httptest.NewRecorder()
+	handler = http.HandlerFunc(UpdateSecretHandler)
+
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("UpdateSecretHandler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
 	// 3. Delete secret
-	req, err = http.NewRequest("DELETE", "/api/secrets/API_KEY", nil)
+	req, err = http.NewRequest("DELETE", "/api/secrets/API_KEY_UPDATED", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Manually set path value
-	req.SetPathValue("key", "API_KEY")
+	req.SetPathValue("id", "API_KEY_UPDATED")
 
 	rr = httptest.NewRecorder()
 	handler = http.HandlerFunc(DeleteSecretHandler)
@@ -91,10 +118,10 @@ func TestSecretsHandlers(t *testing.T) {
 
 	// Verify deletion
 	secretsMutex.RLock()
-	_, exists := secretsStore["API_KEY"]
+	_, exists := secretsStore["API_KEY_UPDATED"]
 	secretsMutex.RUnlock()
 
 	if exists {
-		t.Errorf("API_KEY was not deleted")
+		t.Errorf("API_KEY_UPDATED was not deleted")
 	}
 }

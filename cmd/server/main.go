@@ -68,7 +68,8 @@ func main() {
 
 	mux.HandleFunc("GET /api/secrets", handlers.GetSecretsHandler)
 	mux.HandleFunc("POST /api/secrets", handlers.StoreSecretHandler)
-	mux.HandleFunc("DELETE /api/secrets/{key}", handlers.DeleteSecretHandler)
+	mux.HandleFunc("PUT /api/secrets/{id}", handlers.UpdateSecretHandler)
+	mux.HandleFunc("DELETE /api/secrets/{id}", handlers.DeleteSecretHandler)
 	mux.HandleFunc("POST /api/add-git-providers", handlers.StoreGitProvidersHandler)
 	mux.HandleFunc("POST /api/unset-provider-tokens", handlers.UnsetGitProvidersHandler)
 

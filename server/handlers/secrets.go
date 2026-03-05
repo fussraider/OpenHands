@@ -58,12 +58,18 @@ func GetSecretsHandler(w http.ResponseWriter, r *http.Request) {
 // StoreSecretHandler stores a secret
 func StoreSecretHandler(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Key   string `json:"key"`
-		Value string `json:"value"`
+		Name        string `json:"name"`
+		Value       string `json:"value"`
+		Description string `json:"description"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if req.Name == "" {
+		http.Error(w, "secret name is required", http.StatusBadRequest)
 		return
 	}
 
@@ -75,9 +81,9 @@ func StoreSecretHandler(w http.ResponseWriter, r *http.Request) {
 
 	secretsMutex.Lock()
 	defer secretsMutex.Unlock()
-	secretsStore[req.Key] = encryptedValue
+	secretsStore[req.Name] = encryptedValue
 
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusCreated)
 }
 
 // StoreGitProvidersHandler handles POST /api/add-git-providers
@@ -130,17 +136,71 @@ func UnsetGitProvidersHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"message": "Unset Git provider tokens"})
 }
 
-// DeleteSecretHandler deletes a secret
-func DeleteSecretHandler(w http.ResponseWriter, r *http.Request) {
-	key := r.PathValue("key")
-	if key == "" {
-		http.Error(w, "key is required", http.StatusBadRequest)
+// UpdateSecretHandler updates a secret
+func UpdateSecretHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "secret id is required", http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if req.Name == "" {
+		http.Error(w, "secret name is required", http.StatusBadRequest)
 		return
 	}
 
 	secretsMutex.Lock()
 	defer secretsMutex.Unlock()
-	delete(secretsStore, key)
+
+	// Ensure the secret exists before updating
+	if _, exists := secretsStore[id]; !exists {
+		http.Error(w, "secret not found", http.StatusNotFound)
+		return
+	}
+
+	// For MVP, we only keep track of the encrypted value.
+	// If the name changed, we need to move the key.
+	if id != req.Name {
+		// Check if new name already exists
+		if _, exists := secretsStore[req.Name]; exists {
+			http.Error(w, "a secret with the new name already exists", http.StatusBadRequest)
+			return
+		}
+		// Move the value to the new key
+		secretsStore[req.Name] = secretsStore[id]
+		delete(secretsStore, id)
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+// DeleteSecretHandler deletes a secret
+func DeleteSecretHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "secret id is required", http.StatusBadRequest)
+		return
+	}
+
+	secretsMutex.Lock()
+	defer secretsMutex.Unlock()
+
+	if _, exists := secretsStore[id]; !exists {
+		http.Error(w, "secret not found", http.StatusNotFound)
+		return
+	}
+
+	delete(secretsStore, id)
 
 	w.WriteHeader(http.StatusOK)
 }
