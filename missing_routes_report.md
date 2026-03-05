@@ -6,8 +6,8 @@ This report details the missing routes and handlers in the Go backend compared t
 
 | Python Route | HTTP Method | Python File Reference | Notes/Comment |
 | --- | --- | --- | --- |
-| `/upload-files` | POST | `openhands/server/routes/files.py:332` | Handles multiple file uploads. Critical for frontend file dragging/uploading into the sandbox workspace. |
-| `/conversations/{id}` | PATCH | `openhands/server/routes/manage_conversations.py:1142` | Renaming/updating conversation metadata (e.g. title changes). Currently missing. |
+| ~~`/upload-files`~~ | POST | `openhands/server/routes/files.py:332` | **[PORTED]** Handles multiple file uploads. Included in Go backend as `POST /api/conversations/{id}/upload-files`. |
+| ~~`/conversations/{id}`~~ | PATCH | `openhands/server/routes/manage_conversations.py:1142` | **[PORTED]** Renaming/updating conversation metadata (e.g. title changes). Included in Go backend. |
 | `/conversations/{id}/start` | POST | `openhands/server/routes/manage_conversations.py:779` | Starts a conversation loop for an existing conversation ID. (Go has `/api/conversations` POST, but the distinct `/start` on an ID might be called). |
 | `/conversations/{id}/stop` | POST | `openhands/server/routes/manage_conversations.py:850` | Pauses/Stops an active conversation loop. |
 | `/message` | POST | `openhands/server/routes/conversation.py` | Standalone endpoint to send a message to a session without WebSockets. High priority if fallback polling is used. |

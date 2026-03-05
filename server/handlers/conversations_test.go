@@ -133,6 +133,45 @@ func TestGetConversationHandler(t *testing.T) {
 	}
 }
 
+func TestUpdateConversationHandler(t *testing.T) {
+	// Create a conversation
+	reqBody := models.InitSessionRequest{Repository: "test-repo-update"}
+	created, _ := ConversationStore.CreateConversation(reqBody)
+
+	// Update title
+	updateReq := struct {
+		Title string `json:"title"`
+	}{
+		Title: "New Title 123",
+	}
+	body, _ := json.Marshal(updateReq)
+
+	req, err := http.NewRequest("PATCH", "/api/conversations/"+created.ConversationID, bytes.NewBuffer(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.SetPathValue("id", created.ConversationID)
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(UpdateConversationHandler)
+
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	// Verify update in store
+	updated, err := ConversationStore.GetConversation(created.ConversationID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if updated.Title != "New Title 123" {
+		t.Errorf("expected title to be 'New Title 123', got '%s'", updated.Title)
+	}
+}
+
 func TestDeleteConversationHandler(t *testing.T) {
 	// Create a conversation
 	reqBody := models.InitSessionRequest{Repository: "test-repo-delete"}

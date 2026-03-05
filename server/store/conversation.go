@@ -100,3 +100,19 @@ func (s *ConversationStore) DeleteConversation(id string) error {
 	delete(s.conversations, id)
 	return s.save()
 }
+
+func (s *ConversationStore) UpdateConversation(id string, title string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	c, ok := s.conversations[id]
+	if !ok {
+		return errors.New("conversation not found")
+	}
+
+	c.Title = title
+	c.LastUpdatedAt = time.Now()
+	s.conversations[id] = c
+
+	return s.save()
+}
