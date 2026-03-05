@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/joho/godotenv"
 	"github.com/pelletier/go-toml/v2"
 )
 
@@ -68,6 +69,9 @@ type GithubConfig struct {
 var AppConfig *Config
 
 func LoadConfig() error {
+	// Attempt to load .env file if it exists, ignoring errors if it doesn't
+	_ = godotenv.Load()
+
 	// Default config
 	AppConfig = &Config{
 		AppMode: AppModeOpenHands,
