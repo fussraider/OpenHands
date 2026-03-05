@@ -64,6 +64,12 @@ func main() {
 	mux.HandleFunc("GET /api/conversations/{id}/microagents", handlers.GetConversationMicroagentsHandler)
 	mux.HandleFunc("GET /api/conversations/{id}/remember-prompt", handlers.GetRememberPromptHandler)
 	mux.HandleFunc("GET /api/conversations/{id}/vscode-url", handlers.GetVSCodeURLHandler)
+	mux.HandleFunc("GET /api/conversations/{id}/web-hosts", handlers.GetWebHostsHandler)
+	mux.HandleFunc("GET /api/conversations/{id}/config", handlers.GetConversationConfigHandler)
+	mux.HandleFunc("GET /api/conversations/{id}/events", handlers.GetConversationEventsHandler)
+	mux.HandleFunc("POST /api/conversations/{id}/events", handlers.GetConversationEventsHandler)
+	mux.HandleFunc("POST /api/conversations/{id}/exp-config", handlers.ExpConfigHandler)
+	mux.HandleFunc("GET /api/config", handlers.GetSettingsHandler) // Backwards compatible global config
 
 	mux.HandleFunc("GET /api/conversations/{id}/trajectory", handlers.GetTrajectoryHandler)
 	mux.HandleFunc("POST /api/conversations/{id}/submit-feedback", handlers.SubmitFeedbackHandler)
@@ -102,6 +108,8 @@ func main() {
 
 	mux.HandleFunc("GET /health", handlers.HealthHandler)
 	mux.HandleFunc("GET /alive", handlers.HealthHandler)
+	mux.HandleFunc("GET /ready", handlers.ReadyHandler)
+	mux.HandleFunc("GET /server_info", handlers.ServerInfoHandler)
 
 	// Static file serving
 	staticDir := "frontend/build"

@@ -25,11 +25,11 @@ This report details the missing routes and handlers in the Go backend compared t
 
 | Python Route | HTTP Method | Python File Reference | Notes/Comment |
 | --- | --- | --- | --- |
-| `/web-hosts` | GET | `openhands/server/routes/conversation.py:185` | Port mapping details. May be legacy. |
-| `/conversations/{id}/exp-config` | POST | `openhands/server/routes/manage_conversations.py` | Experimental configuration endpoint. Usually non-critical. |
-| `/events` | GET, POST | `openhands/server/routes/conversation.py` | The legacy global event fetching. Mostly replaced by `/api/conversations/{id}/trajectory` and `/api/v1/conversation/{id}/events`. |
-| `/config` | GET | `openhands/server/routes/conversation.py` / `public.py` | Redundant. Go handles configuration via `/api/settings` and `/api/v1/web-client/config`. |
-| `/server_info`, `/ready` | GET | `openhands/server/routes/health.py` | Go implements `/health` and `/alive`, which handles typical liveness probes adequately. |
+| ~~`/web-hosts`~~ | GET | `openhands/server/routes/conversation.py:185` | **[PORTED]** Port mapping details. May be legacy. |
+| ~~`/conversations/{id}/exp-config`~~ | POST | `openhands/server/routes/manage_conversations.py` | **[PORTED]** Experimental configuration endpoint. Usually non-critical. |
+| ~~`/events`~~ | GET, POST | `openhands/server/routes/conversation.py` | **[PORTED]** The legacy global event fetching. Mostly replaced by `/api/conversations/{id}/trajectory` and `/api/v1/conversation/{id}/events`. |
+| ~~`/config`~~ | GET | `openhands/server/routes/conversation.py` / `public.py` | **[PORTED]** Redundant. Go handles configuration via `/api/settings` and `/api/v1/web-client/config`. |
+| ~~`/server_info`, `/ready`~~ | GET | `openhands/server/routes/health.py` | **[PORTED]** Go implements `/health` and `/alive`, which handles typical liveness probes adequately. Added placeholder implementations. |
 
 ## Existing/Implemented Handlers (For Reference)
 

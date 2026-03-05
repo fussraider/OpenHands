@@ -268,6 +268,46 @@ func TestConversationAdditionalEndpoints(t *testing.T) {
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("GetVSCodeURLHandler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
+
+	// Web Hosts
+	req, _ = http.NewRequest("GET", "/api/conversations/123/web-hosts", nil)
+	req.SetPathValue("id", "123")
+	rr = httptest.NewRecorder()
+	handler = http.HandlerFunc(GetWebHostsHandler)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("GetWebHostsHandler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	// Config
+	req, _ = http.NewRequest("GET", "/api/conversations/123/config", nil)
+	req.SetPathValue("id", "123")
+	rr = httptest.NewRecorder()
+	handler = http.HandlerFunc(GetConversationConfigHandler)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("GetConversationConfigHandler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	// Events
+	req, _ = http.NewRequest("GET", "/api/conversations/123/events", nil)
+	req.SetPathValue("id", "123")
+	rr = httptest.NewRecorder()
+	handler = http.HandlerFunc(GetConversationEventsHandler)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("GetConversationEventsHandler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	// Exp Config
+	req, _ = http.NewRequest("POST", "/api/conversations/123/exp-config", nil)
+	req.SetPathValue("id", "123")
+	rr = httptest.NewRecorder()
+	handler = http.HandlerFunc(ExpConfigHandler)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("ExpConfigHandler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
 }
 
 func TestDeleteConversationHandler(t *testing.T) {
