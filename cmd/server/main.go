@@ -53,6 +53,8 @@ func main() {
 	mux.HandleFunc("GET /api/conversations/{id}", handlers.GetConversationHandler)
 	mux.HandleFunc("PATCH /api/conversations/{id}", handlers.UpdateConversationHandler)
 	mux.HandleFunc("DELETE /api/conversations/{id}", handlers.DeleteConversationHandler)
+	mux.HandleFunc("POST /api/conversations/{id}/start", handlers.StartConversationHandler)
+	mux.HandleFunc("POST /api/conversations/{id}/stop", handlers.StopConversationHandler)
 	mux.HandleFunc("POST /api/conversations/{id}/action", handlers.ExecuteActionHandler) // New route
 
 	mux.HandleFunc("GET /api/conversations/{id}/list-files", handlers.ListFilesHandler)

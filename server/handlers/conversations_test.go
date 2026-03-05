@@ -172,6 +172,33 @@ func TestUpdateConversationHandler(t *testing.T) {
 	}
 }
 
+func TestStartStopConversationHandler(t *testing.T) {
+	reqBody := models.InitSessionRequest{Repository: "test-repo-start-stop"}
+	created, _ := ConversationStore.CreateConversation(reqBody)
+
+	// Stop
+	req, _ := http.NewRequest("POST", "/api/conversations/"+created.ConversationID+"/stop", nil)
+	req.SetPathValue("id", created.ConversationID)
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(StopConversationHandler)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("Stop returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	// Start
+	req, _ = http.NewRequest("POST", "/api/conversations/"+created.ConversationID+"/start", nil)
+	req.SetPathValue("id", created.ConversationID)
+	rr = httptest.NewRecorder()
+	handler = http.HandlerFunc(StartConversationHandler)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("Start returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+}
+
 func TestDeleteConversationHandler(t *testing.T) {
 	// Create a conversation
 	reqBody := models.InitSessionRequest{Repository: "test-repo-delete"}
