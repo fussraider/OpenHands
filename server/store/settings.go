@@ -28,6 +28,9 @@ func (s *SettingsStore) load() {
 		return
 	}
 	json.Unmarshal(data, &s.settings)
+	if s.settings.ProviderTokensSet == nil {
+		s.settings.ProviderTokensSet = make(map[string]string)
+	}
 }
 
 func (s *SettingsStore) save() error {
@@ -47,6 +50,11 @@ func (s *SettingsStore) Get() models.Settings {
 func (s *SettingsStore) Update(newSettings models.Settings) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	if newSettings.ProviderTokensSet == nil {
+		newSettings.ProviderTokensSet = make(map[string]string)
+	}
+
 	s.settings = newSettings
 	return s.save()
 }
