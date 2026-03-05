@@ -32,6 +32,10 @@ func GetWebHostsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// MVP Mock Runtime Type
+	slog.Debug("Runtime type: LocalMock")
+	slog.Debug("Runtime hosts: {}")
+
 	response := map[string]interface{}{
 		"hosts": map[string]interface{}{},
 	}
@@ -185,6 +189,9 @@ func GetVSCodeURLHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "conversation id required", http.StatusBadRequest)
 		return
 	}
+
+	slog.Debug("Runtime type: LocalMock")
+	slog.Debug("Runtime VSCode URL: nil")
 
 	response := map[string]interface{}{
 		"vscode_url": nil,

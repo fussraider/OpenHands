@@ -2,12 +2,14 @@ package handlers
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"openhands-go/server/models"
 )
 
 // GetMicroagentManagementConversationsHandler returns conversations filtered for microagent management
 func GetMicroagentManagementConversationsHandler(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("V1 conversation service not available: using mock local fallback")
 	selectedRepository := r.URL.Query().Get("selected_repository")
 
 	// Default to returning all conversations for now if no repo provided,
