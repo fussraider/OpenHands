@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"openhands-go/server/agent"
 	"openhands-go/server/config"
 	"openhands-go/server/events"
@@ -48,6 +49,8 @@ func (rm *RuntimeManager) CreateRuntime(ctx context.Context, conversationID stri
 	var rt runtime.Runtime
 	var err error
 
+	slog.Debug("Initializing runtime now...", "runtime", config.AppConfig.Sandbox.Runtime, "conversation_id", conversationID)
+
 	// Check config to decide which runtime to use
 	if config.AppConfig.Sandbox.Runtime == "docker" {
 		rt, err = runtime.NewDockerRuntime(config.AppConfig)
@@ -56,6 +59,7 @@ func (rm *RuntimeManager) CreateRuntime(ctx context.Context, conversationID stri
 	}
 
 	if err != nil {
+		slog.Debug("Failed to initialize runtime", "error", err)
 		return nil, err
 	}
 

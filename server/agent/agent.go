@@ -533,6 +533,7 @@ func (a *Agent) RunLoop(ctx context.Context) {
 
 func (a *Agent) InitPlugins(ctx context.Context) error {
 	for _, p := range a.Plugins {
+		slog.Debug("Initializing plugin", "plugin", p.Name())
 		if err := p.Init(ctx, a.Runtime); err != nil {
 			return fmt.Errorf("failed to init plugin %s: %w", p.Name(), err)
 		}
