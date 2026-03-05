@@ -17,9 +17,9 @@ This report details the missing routes and handlers in the Go backend compared t
 | Python Route | HTTP Method | Python File Reference | Notes/Comment |
 | --- | --- | --- | --- |
 | ~~`/suggested-tasks`~~ | GET | `openhands/server/routes/git.py:221` | **[PORTED]** Provides suggested tasks/issues from repositories. |
-| `/conversations/{id}/microagents` | GET | `openhands/server/routes/manage_conversations.py` | Specific conversation microagents payload. Go only has the global user microagents endpoint (`/api/user/repository/.../microagents`). |
-| `/conversations/{id}/remember-prompt` | GET | `openhands/server/routes/manage_conversations.py:671` | Fetches a prompt generated from the memory condenser/microagents. |
-| `/vscode-url` | GET | `openhands/server/routes/conversation.py:150` | Returns the URL for the embedded VSCode workspace. Will break the embedded IDE button/iframe. |
+| ~~`/conversations/{id}/microagents`~~ | GET | `openhands/server/routes/manage_conversations.py` | **[PORTED]** Specific conversation microagents payload. |
+| ~~`/conversations/{id}/remember-prompt`~~ | GET | `openhands/server/routes/manage_conversations.py:671` | **[PORTED]** Fetches a prompt generated from the memory condenser/microagents. |
+| ~~`/vscode-url`~~ | GET | `openhands/server/routes/conversation.py:150` | **[PORTED]** Returns the URL for the embedded VSCode workspace. |
 
 ## 3. Low Priority (Deprecated, redundant, or internal)
 

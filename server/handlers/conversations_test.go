@@ -238,6 +238,38 @@ func TestAddMessageHandler(t *testing.T) {
 	}
 }
 
+func TestConversationAdditionalEndpoints(t *testing.T) {
+	// Microagents
+	req, _ := http.NewRequest("GET", "/api/conversations/123/microagents", nil)
+	req.SetPathValue("id", "123")
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(GetConversationMicroagentsHandler)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("GetConversationMicroagentsHandler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	// Remember Prompt
+	req, _ = http.NewRequest("GET", "/api/conversations/123/remember-prompt", nil)
+	req.SetPathValue("id", "123")
+	rr = httptest.NewRecorder()
+	handler = http.HandlerFunc(GetRememberPromptHandler)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("GetRememberPromptHandler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	// VSCode URL
+	req, _ = http.NewRequest("GET", "/api/conversations/123/vscode-url", nil)
+	req.SetPathValue("id", "123")
+	rr = httptest.NewRecorder()
+	handler = http.HandlerFunc(GetVSCodeURLHandler)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("GetVSCodeURLHandler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+}
+
 func TestDeleteConversationHandler(t *testing.T) {
 	// Create a conversation
 	reqBody := models.InitSessionRequest{Repository: "test-repo-delete"}
