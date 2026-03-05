@@ -25,6 +25,14 @@ type GitInstallation struct {
 	ID int64 `json:"id"`
 }
 
+type SuggestedTask struct {
+	GitProvider string `json:"git_provider"`
+	IssueNumber int    `json:"issue_number"`
+	Repo        string `json:"repo"`
+	Title       string `json:"title"`
+	TaskType    string `json:"task_type"` // e.g. "OPEN_ISSUE", "MERGE_CONFLICTS", "FAILING_CHECKS", "UNRESOLVED_COMMENTS"
+}
+
 // GitProvider defines the common interface for git providers (GitHub, GitLab, etc.)
 type GitProvider interface {
 	ListRepositories(ctx context.Context, token string, page, perPage int, sort string) ([]GitRepository, error)
@@ -36,4 +44,5 @@ type GitProvider interface {
 	GetFileContent(ctx context.Context, token, owner, repo, path string) (string, error)
 	GetMicroagents(ctx context.Context, token, owner, repo string) ([]microagent.MicroagentResponse, error)
 	GetMicroagentContent(ctx context.Context, token, owner, repo, path string) (*microagent.MicroagentContentResponse, error)
+	GetSuggestedTasks(ctx context.Context, token string) ([]SuggestedTask, error)
 }

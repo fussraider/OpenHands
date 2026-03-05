@@ -10,13 +10,13 @@ This report details the missing routes and handlers in the Go backend compared t
 | ~~`/conversations/{id}`~~ | PATCH | `openhands/server/routes/manage_conversations.py:1142` | **[PORTED]** Renaming/updating conversation metadata (e.g. title changes). Included in Go backend. |
 | ~~`/conversations/{id}/start`~~ | POST | `openhands/server/routes/manage_conversations.py:779` | **[PORTED]** Starts a conversation loop for an existing conversation ID. |
 | ~~`/conversations/{id}/stop`~~ | POST | `openhands/server/routes/manage_conversations.py:850` | **[PORTED]** Pauses/Stops an active conversation loop. |
-| `/message` | POST | `openhands/server/routes/conversation.py` | Standalone endpoint to send a message to a session without WebSockets. High priority if fallback polling is used. |
+| ~~`/message`~~ | POST | `openhands/server/routes/conversation.py` | **[PORTED]** Standalone endpoint to send a message to a session without WebSockets. Includes payload translation to `MessageAction` via `ExecuteAction`. |
 
 ## 2. Medium Priority (Features that might throw soft errors or limit context)
 
 | Python Route | HTTP Method | Python File Reference | Notes/Comment |
 | --- | --- | --- | --- |
-| `/suggested-tasks` | GET | `openhands/server/routes/git.py:221` | Provides suggested tasks/issues from repositories. Missing this breaks the auto-suggestion modal on the frontend UI. |
+| ~~`/suggested-tasks`~~ | GET | `openhands/server/routes/git.py:221` | **[PORTED]** Provides suggested tasks/issues from repositories. |
 | `/conversations/{id}/microagents` | GET | `openhands/server/routes/manage_conversations.py` | Specific conversation microagents payload. Go only has the global user microagents endpoint (`/api/user/repository/.../microagents`). |
 | `/conversations/{id}/remember-prompt` | GET | `openhands/server/routes/manage_conversations.py:671` | Fetches a prompt generated from the memory condenser/microagents. |
 | `/vscode-url` | GET | `openhands/server/routes/conversation.py:150` | Returns the URL for the embedded VSCode workspace. Will break the embedded IDE button/iframe. |

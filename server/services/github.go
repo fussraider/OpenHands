@@ -19,7 +19,7 @@ type IGithubService interface {
 	SearchBranches(ctx context.Context, token, owner, repo, query string) ([]*github.Branch, error)
 	GetUser(ctx context.Context, token string) (*github.User, error)
 	GetInstallations(ctx context.Context, token string) ([]*github.Installation, error)
-	GetSuggestedTasks(ctx context.Context, token string) ([]interface{}, error)
+	GetSuggestedTasks(ctx context.Context, token string) ([]SuggestedTask, error)
 	GetFileContent(ctx context.Context, token, owner, repo, path string) (string, error)
 	ListDirectory(ctx context.Context, token, owner, repo, path string) ([]*github.RepositoryContent, error)
 	GetMicroagents(ctx context.Context, token, owner, repo string) ([]microagent.MicroagentResponse, error)
@@ -97,8 +97,10 @@ func (s *GithubService) GetInstallations(ctx context.Context, token string) ([]*
 	return installations, nil
 }
 
-func (s *GithubService) GetSuggestedTasks(ctx context.Context, token string) ([]interface{}, error) {
-	return []interface{}{}, nil
+func (s *GithubService) GetSuggestedTasks(ctx context.Context, token string) ([]SuggestedTask, error) {
+	// MVP: return empty tasks or mock tasks.
+	// The Python version fetches user PRs and issues.
+	return []SuggestedTask{}, nil
 }
 
 func (s *GithubService) GetFileContent(ctx context.Context, token, owner, repo, path string) (string, error) {

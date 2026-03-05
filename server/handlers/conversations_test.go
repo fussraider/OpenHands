@@ -199,6 +199,45 @@ func TestStartStopConversationHandler(t *testing.T) {
 	}
 }
 
+func TestAddMessageHandler(t *testing.T) {
+	reqBody := models.InitSessionRequest{Repository: "test-repo-message"}
+	created, _ := ConversationStore.CreateConversation(reqBody)
+
+	msgReq := struct {
+		Message string `json:"message"`
+	}{
+		Message: "Hello from test!",
+	}
+	body, _ := json.Marshal(msgReq)
+
+	req, _ := http.NewRequest("POST", "/api/conversations/"+created.ConversationID+"/message", bytes.NewBuffer(body))
+	req.SetPathValue("id", created.ConversationID)
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(AddMessageHandler)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("AddMessage returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	// Verify it was added to the event stream
+	es := ActionService.GetEventStream(created.ConversationID)
+	eventsList := es.GetEvents()
+	found := false
+	for _, ev := range eventsList {
+		if reqData, ok := ev.Content.(models.ActionRequest); ok {
+			if reqData.Action == "message" && reqData.Args == "Hello from test!" {
+				found = true
+				break
+			}
+		}
+	}
+	if !found {
+		t.Errorf("Message was not found in event stream")
+	}
+}
+
 func TestDeleteConversationHandler(t *testing.T) {
 	// Create a conversation
 	reqBody := models.InitSessionRequest{Repository: "test-repo-delete"}

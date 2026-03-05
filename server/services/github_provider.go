@@ -213,3 +213,8 @@ func (s *GitHubProvider) GetMicroagentContent(ctx context.Context, token, owner,
 		GitProvider: "github",
 	}, nil
 }
+
+func (s *GitHubProvider) GetSuggestedTasks(ctx context.Context, token string) ([]SuggestedTask, error) {
+	// MVP Mock/Stub - would ideally call out to GitHub API like python `client.get_suggested_tasks()`
+	return []SuggestedTask{}, nil
+}

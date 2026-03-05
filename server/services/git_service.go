@@ -72,6 +72,10 @@ func (s *GitService) GetMicroagentContent(ctx context.Context, token, owner, rep
 }
 
 // IGithubService compatibility (deprecated)
-func (s *GitService) GetSuggestedTasks(ctx context.Context, token string) ([]interface{}, error) {
-	return []interface{}{}, nil
+func (s *GitService) GetSuggestedTasks(ctx context.Context, token string) ([]SuggestedTask, error) {
+	p, _ := s.GetProvider(ctx, token)
+	if p == nil {
+		return []SuggestedTask{}, nil
+	}
+	return p.GetSuggestedTasks(ctx, token)
 }

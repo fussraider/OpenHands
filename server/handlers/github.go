@@ -201,6 +201,26 @@ func GetRepositoryMicroagentsHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(microagents)
 }
 
+func GetSuggestedTasksHandler(w http.ResponseWriter, r *http.Request) {
+	token := getToken(r)
+	if token == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	tasks, err := GitService.GetSuggestedTasks(r.Context(), token)
+	if err != nil {
+		http.Error(w, "Failed to get suggested tasks: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if tasks == nil {
+		tasks = []services.SuggestedTask{}
+	}
+	json.NewEncoder(w).Encode(tasks)
+}
+
 func GetRepositoryMicroagentContentHandler(w http.ResponseWriter, r *http.Request) {
 	token := getToken(r)
 	if token == "" {

@@ -39,6 +39,17 @@ func (m *MockGitProvider) GetMicroagents(ctx context.Context, token, owner, repo
 func (m *MockGitProvider) GetMicroagentContent(ctx context.Context, token, owner, repo, path string) (*microagent.MicroagentContentResponse, error) {
 	return &microagent.MicroagentContentResponse{Content: "mock"}, nil
 }
+func (m *MockGitProvider) GetSuggestedTasks(ctx context.Context, token string) ([]services.SuggestedTask, error) {
+	return []services.SuggestedTask{
+		{
+			GitProvider: "github",
+			IssueNumber: 1,
+			Repo:        "openhands/test-repo",
+			Title:       "Test issue",
+			TaskType:    "OPEN_ISSUE",
+		},
+	}, nil
+}
 
 func init() {
 	GitService = &services.GitService{
@@ -129,5 +140,31 @@ func TestGithubHandlers(t *testing.T) {
 	http.HandlerFunc(GetRepositoryMicroagentContentHandler).ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
 		t.Errorf("GetRepositoryMicroagentContentHandler returned wrong status code: got %v want %v", rr.Code, http.StatusOK)
+	}
+}
+
+func TestGetSuggestedTasksHandler(t *testing.T) {
+	req, _ := http.NewRequest("GET", "/api/user/suggested-tasks", nil)
+	req.Header.Set("Authorization", "Bearer token")
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(GetSuggestedTasksHandler)
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("expected status 200, got %d", rr.Code)
+	}
+
+	var tasks []services.SuggestedTask
+	if err := json.NewDecoder(rr.Body).Decode(&tasks); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(tasks) != 1 {
+		t.Fatalf("expected 1 suggested task, got %d", len(tasks))
+	}
+
+	if tasks[0].Title != "Test issue" {
+		t.Errorf("expected task title 'Test issue', got '%s'", tasks[0].Title)
 	}
 }

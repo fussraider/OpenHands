@@ -56,6 +56,7 @@ func main() {
 	mux.HandleFunc("POST /api/conversations/{id}/start", handlers.StartConversationHandler)
 	mux.HandleFunc("POST /api/conversations/{id}/stop", handlers.StopConversationHandler)
 	mux.HandleFunc("POST /api/conversations/{id}/action", handlers.ExecuteActionHandler) // New route
+	mux.HandleFunc("POST /api/conversations/{id}/message", handlers.AddMessageHandler)
 
 	mux.HandleFunc("GET /api/conversations/{id}/list-files", handlers.ListFilesHandler)
 	mux.HandleFunc("GET /api/conversations/{id}/select-file", handlers.SelectFileHandler)
@@ -84,6 +85,7 @@ func main() {
 	mux.HandleFunc("GET /api/user/search/repositories", handlers.SearchRepositoriesHandler)
 	mux.HandleFunc("GET /api/user/search/branches", handlers.SearchBranchesHandler)
 	mux.HandleFunc("GET /api/user/repository/branches", handlers.GetRepositoryBranchesHandler)
+	mux.HandleFunc("GET /api/user/suggested-tasks", handlers.GetSuggestedTasksHandler)
 	// Go 1.22+ supports wildcard {name...}, but it must be at the end of the path.
 	// We use {owner}/{repo} to avoid the panic.
 	mux.HandleFunc("GET /api/user/repository/{owner}/{repo}/microagents", handlers.GetRepositoryMicroagentsHandler)

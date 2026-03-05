@@ -62,6 +62,38 @@ func NewConversationHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(conversation)
 }
 
+func AddMessageHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "conversation id required", http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		Message string `json:"message"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if ActionService != nil {
+		actionReq := models.ActionRequest{
+			Action: "message",
+			Args:   req.Message,
+		}
+		// Context from request since this is just an append operation
+		_, err := ActionService.ExecuteAction(r.Context(), id, actionReq)
+		if err != nil {
+			http.Error(w, "Failed to add message: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+}
+
 func StartConversationHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
