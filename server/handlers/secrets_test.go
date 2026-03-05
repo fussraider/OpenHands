@@ -49,20 +49,26 @@ func TestSecretsHandlers(t *testing.T) {
 			status, http.StatusOK)
 	}
 
-	var keys []string
-	if err := json.NewDecoder(rr.Body).Decode(&keys); err != nil {
+	var response struct {
+		CustomSecrets []struct {
+			Name        string `json:"name"`
+			Description string `json:"description"`
+		} `json:"custom_secrets"`
+	}
+
+	if err := json.NewDecoder(rr.Body).Decode(&response); err != nil {
 		t.Errorf("GetSecretsHandler returned invalid JSON: %v", err)
 	}
 
 	found := false
-	for _, k := range keys {
-		if k == "API_KEY" {
+	for _, sec := range response.CustomSecrets {
+		if sec.Name == "API_KEY" {
 			found = true
 			break
 		}
 	}
 	if !found {
-		t.Errorf("API_KEY not found in secrets: %v", keys)
+		t.Errorf("API_KEY not found in secrets: %v", response.CustomSecrets)
 	}
 
 	// 3. Delete secret

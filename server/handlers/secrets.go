@@ -27,14 +27,32 @@ func GetSecretsHandler(w http.ResponseWriter, r *http.Request) {
 	secretsMutex.RLock()
 	defer secretsMutex.RUnlock()
 
-	// In legacy V0, /api/secrets returns a list of secret names
-	keys := make([]string, 0, len(secretsStore))
+	type customSecret struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+	}
+
+	customSecrets := make([]customSecret, 0, len(secretsStore))
 	for k := range secretsStore {
-		keys = append(keys, k)
+		// Filter out internal secrets like git_provider_*
+		if !strings.HasPrefix(k, "git_provider_") {
+			customSecrets = append(customSecrets, customSecret{
+				Name:        k,
+				Description: "", // Description not currently stored in simple MVP map
+			})
+		}
+	}
+
+	if customSecrets == nil {
+		customSecrets = []customSecret{}
+	}
+
+	response := map[string]interface{}{
+		"custom_secrets": customSecrets,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(keys)
+	json.NewEncoder(w).Encode(response)
 }
 
 // StoreSecretHandler stores a secret
