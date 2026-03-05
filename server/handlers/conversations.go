@@ -62,6 +62,32 @@ func NewConversationHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(conversation)
 }
 
+func DeleteConversationHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "conversation id required", http.StatusBadRequest)
+		return
+	}
+
+	err := ConversationStore.DeleteConversation(id)
+	if err != nil {
+		if err.Error() == "conversation not found" {
+			http.NotFound(w, r)
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Also stop the agent loop / runtime if it exists
+	if RuntimeManager != nil {
+		RuntimeManager.StopRuntime(id)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+}
+
 func GetConversationHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	conversation, err := ConversationStore.GetConversation(id)

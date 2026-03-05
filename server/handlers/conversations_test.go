@@ -132,3 +132,42 @@ func TestGetConversationHandler(t *testing.T) {
 			conversation.ConversationID, created.ConversationID)
 	}
 }
+
+func TestDeleteConversationHandler(t *testing.T) {
+	// Create a conversation
+	reqBody := models.InitSessionRequest{Repository: "test-repo-delete"}
+	created, _ := ConversationStore.CreateConversation(reqBody)
+
+	// Create request to delete
+	req, err := http.NewRequest("DELETE", "/api/conversations/"+created.ConversationID, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Manually set path value
+	req.SetPathValue("id", created.ConversationID)
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(DeleteConversationHandler)
+
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	// Verify conversation is actually deleted
+	_, err = ConversationStore.GetConversation(created.ConversationID)
+	if err == nil {
+		t.Errorf("expected conversation to be deleted, but it was found")
+	}
+
+	// Test deleting non-existent conversation
+	req, _ = http.NewRequest("DELETE", "/api/conversations/non-existent-id", nil)
+	req.SetPathValue("id", "non-existent-id")
+	rr = httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusNotFound {
+		t.Errorf("handler returned wrong status code for non-existent id: got %v want %v", status, http.StatusNotFound)
+	}
+}

@@ -88,3 +88,15 @@ func (s *ConversationStore) CreateConversation(req models.InitSessionRequest) (m
 	}
 	return conversation, nil
 }
+
+func (s *ConversationStore) DeleteConversation(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, ok := s.conversations[id]; !ok {
+		return errors.New("conversation not found")
+	}
+
+	delete(s.conversations, id)
+	return s.save()
+}
