@@ -2,20 +2,20 @@ package models
 
 // WebClientConfig is the model representing the web client configuration settings
 type WebClientConfig struct {
-	AppMode             string                `json:"appMode"`
-	PosthogClientKey    *string               `json:"posthogClientKey"`
-	GithubAppSlug       *string               `json:"githubAppSlug"`
-	FeatureFlags        WebClientFeatureFlags `json:"featureFlags"`
-	ProvidersConfigured []string              `json:"providersConfigured"`
-	FaultyModels        []string              `json:"faultyModels"`
-	UpdatedAt           string                `json:"updatedAt"`
+	AppMode             string                `json:"app_mode"`
+	PosthogClientKey    *string               `json:"posthog_client_key"`
+	GithubAppSlug       *string               `json:"github_app_slug"`
+	FeatureFlags        WebClientFeatureFlags `json:"feature_flags"`
+	ProvidersConfigured []string              `json:"providers_configured"`
+	FaultyModels        []string              `json:"faulty_models"`
+	UpdatedAt           string                `json:"updated_at"`
 }
 
 // WebClientFeatureFlags configures various toggle features
 type WebClientFeatureFlags struct {
-	EnableBilling   bool `json:"enableBilling"`
-	HideLLMSettings bool `json:"hideLLMSettings"`
-	EnableJira      bool `json:"enableJira"`
-	EnableJiraDC    bool `json:"enableJiraDC"`
-	EnableLinear    bool `json:"enableLinear"`
+	EnableBilling   bool `json:"enable_billing"`
+	HideLLMSettings bool `json:"hide_llm_settings"`
+	EnableJira      bool `json:"enable_jira"`
+	EnableJiraDC    bool `json:"enable_jira_dc"`
+	EnableLinear    bool `json:"enable_linear"`
 }
