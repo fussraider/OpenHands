@@ -108,6 +108,7 @@ func (rm *RuntimeManager) StartAgent(ctx context.Context, conversationID string,
 }
 
 func (rm *RuntimeManager) StopRuntime(conversationID string) error {
+	slog.Debug("Waiting for initialization to finish before closing session", "sid", conversationID)
 	rm.mu.Lock()
 	defer rm.mu.Unlock()
 

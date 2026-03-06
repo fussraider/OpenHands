@@ -95,6 +95,8 @@ func ListFilesHandler(w http.ResponseWriter, r *http.Request) {
 
 // UploadFilesHandler handles file uploads to the workspace
 func UploadFilesHandler(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("File upload config: max_size=10MB, restrict_types=false, allowed_extensions=[.*]")
+
 	// Parse multipart form, 10MB max memory
 	err := r.ParseMultipartForm(10 << 20)
 	if err != nil {

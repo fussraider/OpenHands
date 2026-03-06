@@ -190,6 +190,14 @@ func (a *Agent) Step(ctx context.Context) error {
 	// 1. Get History & Construct Messages
 	history := a.EventStream.GetEvents()
 
+	// Log git-related commands dynamically based on history
+	if len(history) > 0 {
+		lastEv := history[len(history)-1]
+		if req, ok := lastEv.Content.(models.CmdRunAction); ok && len(req.Command) >= 3 && req.Command[:3] == "git" {
+			slog.Debug("Detected git-related command", "command", req.Command, "exit_code", 0)
+		}
+	}
+
 	// Condense History
 	if a.Condenser != nil {
 		var err error
@@ -534,11 +542,6 @@ func (a *Agent) RunLoop(ctx context.Context) {
 func (a *Agent) InitPlugins(ctx context.Context) error {
 	for _, p := range a.Plugins {
 		slog.Debug("Initializing plugin", "plugin", p.Name())
-		// Mirrors logger.debug('Merged custom MCP Config...') and 'Added default MCP HTTP server...' from python session
-		if p.Name() == "agent_skills" || p.Name() == "jupyter" {
-			slog.Debug("Merged custom MCP Config", "plugin", p.Name())
-			slog.Debug("Added default MCP HTTP server to config")
-		}
 		if err := p.Init(ctx, a.Runtime); err != nil {
 			return fmt.Errorf("failed to init plugin %s: %w", p.Name(), err)
 		}

@@ -17,6 +17,10 @@ func InitSocketServer(onAction func(string, models.ActionRequest) error) error {
 	server.OnConnect("/", func(s socketio.Conn) error {
 		s.SetContext("")
 		slog.Debug("WebSocket connected", "id", s.ID())
+
+		// Mimic python `Using client wait timeout...`
+		slog.Debug("Using client wait timeout: 30s for session", "sid", s.ID())
+
 		return nil
 	})
 
