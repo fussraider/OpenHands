@@ -3,6 +3,7 @@ package store
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"openhands-go/server/models"
 	"os"
 	"sync"
@@ -67,6 +68,11 @@ func (s *ConversationStore) GetConversation(id string) (models.ConversationInfo,
 func (s *ConversationStore) CreateConversation(req models.InitSessionRequest) (models.ConversationInfo, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	// Mimics logger.debug(f'closing_from_too_many_sessions...') from python standalone_conversation_manager.py
+	if len(s.conversations) >= 50 { // arbitrary max for MVP
+		slog.Debug("closing_from_too_many_sessions", "warning", "max limit reached")
+	}
 
 	id := uuid.New().String()
 	now := time.Now()

@@ -60,6 +60,7 @@ func BroadcastEvent(conversationID string, event events.Event) {
 	if Server != nil {
 		// Frontend expects "oh_event"
 		slog.Debug("Sent message", "conversation_id", conversationID, "event_type", event.Type, "event_id", event.ID)
+		slog.Debug("oh_event", "type", event.Type) // mirrors logger.debug(f'oh_event: {event.__class__.__name__}')
 		Server.BroadcastToRoom("/", "room:"+conversationID, "oh_event", event)
 	}
 }

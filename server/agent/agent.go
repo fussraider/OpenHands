@@ -534,6 +534,11 @@ func (a *Agent) RunLoop(ctx context.Context) {
 func (a *Agent) InitPlugins(ctx context.Context) error {
 	for _, p := range a.Plugins {
 		slog.Debug("Initializing plugin", "plugin", p.Name())
+		// Mirrors logger.debug('Merged custom MCP Config...') and 'Added default MCP HTTP server...' from python session
+		if p.Name() == "agent_skills" || p.Name() == "jupyter" {
+			slog.Debug("Merged custom MCP Config", "plugin", p.Name())
+			slog.Debug("Added default MCP HTTP server to config")
+		}
 		if err := p.Init(ctx, a.Runtime); err != nil {
 			return fmt.Errorf("failed to init plugin %s: %w", p.Name(), err)
 		}

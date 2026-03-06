@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -172,6 +173,12 @@ func UploadFilesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // SelectFileHandler returns file content
+// ZipWorkspaceHandler returns a zip of the workspace (placeholder)
+func ZipWorkspaceHandler(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("Zipping workspace")
+	http.Error(w, "Not implemented in MVP", http.StatusNotImplemented)
+}
+
 func SelectFileHandler(w http.ResponseWriter, r *http.Request) {
 	file := r.URL.Query().Get("file")
 	if file == "" {

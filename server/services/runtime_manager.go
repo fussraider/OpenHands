@@ -33,6 +33,8 @@ func (rm *RuntimeManager) GetRuntime(conversationID string) (runtime.Runtime, er
 
 	rt, ok := rm.runtimes[conversationID]
 	if !ok {
+		// Mirrors python: logger.debug(f'Could not get runtime status for {conversation_id}: {e}')
+		slog.Debug("Could not get runtime status", "conversation_id", conversationID, "error", "runtime not found")
 		return nil, errors.New("runtime not found")
 	}
 	return rt, nil
@@ -79,6 +81,9 @@ func (rm *RuntimeManager) StartAgent(ctx context.Context, conversationID string,
 	if !ok {
 		return errors.New("runtime must be created before starting agent")
 	}
+
+	// Mirrors python: logger.debug('Attaching to session ...') or 'Restored session ...'
+	slog.Debug("Attaching to session ...", "conversation_id", conversationID)
 
 	llmService, err := llm.NewLLMService(config.AppConfig.LLM)
 	if err != nil {

@@ -61,6 +61,7 @@ func main() {
 	mux.HandleFunc("GET /api/conversations/{id}/list-files", handlers.ListFilesHandler)
 	mux.HandleFunc("GET /api/conversations/{id}/select-file", handlers.SelectFileHandler)
 	mux.HandleFunc("POST /api/conversations/{id}/upload-files", handlers.UploadFilesHandler)
+	mux.HandleFunc("GET /api/conversations/{id}/zip-workspace", handlers.ZipWorkspaceHandler)
 	mux.HandleFunc("GET /api/conversations/{id}/microagents", handlers.GetConversationMicroagentsHandler)
 	mux.HandleFunc("GET /api/conversations/{id}/remember-prompt", handlers.GetRememberPromptHandler)
 	mux.HandleFunc("GET /api/conversations/{id}/vscode-url", handlers.GetVSCodeURLHandler)
