@@ -10,6 +10,10 @@ import (
 	"sync"
 )
 
+import (
+	"log/slog"
+)
+
 // MCPClient implements a basic JSON-RPC 2.0 client over Stdio
 type MCPClient struct {
 	Command   string
@@ -59,6 +63,8 @@ func NewStdioMCPClient(command string, args ...string) *MCPClient {
 }
 
 func (c *MCPClient) Connect(ctx context.Context) error {
+	slog.Debug("MCP configuration before setup", "command", c.Command, "args", c.Args)
+
 	c.cmd = exec.CommandContext(ctx, c.Command, c.Args...)
 
 	stdin, err := c.cmd.StdinPipe()
@@ -95,6 +101,9 @@ func (c *MCPClient) Connect(ctx context.Context) error {
 
 	// Send initialized notification
 	c.notify("notifications/initialized", nil)
+
+	slog.Debug("Merged custom MCP Config", "command", c.Command)
+	slog.Debug("MCP configuration after setup", "tools_count", len(c.Tools))
 
 	return nil
 }

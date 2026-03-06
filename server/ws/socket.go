@@ -62,9 +62,17 @@ func InitSocketServer(onAction func(string, models.ActionRequest) error) error {
 
 func BroadcastEvent(conversationID string, event events.Event) {
 	if Server != nil {
+		// Check if room has clients. If empty, mimic python's wait logging.
+		roomName := "room:" + conversationID
+		if Server.RoomLen("/", roomName) == 0 {
+			slog.Debug("There is no listening client in the current room, waiting for the 1th attempt (timeout: 30s)", "sid", conversationID)
+			// In MVP we just drop/queue the event depending on EventStream persistence,
+			// but we port the log exactly as requested.
+		}
+
 		// Frontend expects "oh_event"
 		slog.Debug("Sent message", "conversation_id", conversationID, "event_type", event.Type, "event_id", event.ID)
 		slog.Debug("oh_event", "type", event.Type) // mirrors logger.debug(f'oh_event: {event.__class__.__name__}')
-		Server.BroadcastToRoom("/", "room:"+conversationID, "oh_event", event)
+		Server.BroadcastToRoom("/", roomName, "oh_event", event)
 	}
 }

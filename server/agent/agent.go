@@ -540,12 +540,15 @@ func (a *Agent) RunLoop(ctx context.Context) {
 }
 
 func (a *Agent) InitPlugins(ctx context.Context) error {
+	var pluginNames []string
 	for _, p := range a.Plugins {
 		slog.Debug("Initializing plugin", "plugin", p.Name())
 		if err := p.Init(ctx, a.Runtime); err != nil {
 			return fmt.Errorf("failed to init plugin %s: %w", p.Name(), err)
 		}
+		pluginNames = append(pluginNames, p.Name())
 	}
+	slog.Debug("Runtime initialized with plugins", "plugins", pluginNames)
 	return nil
 }
 
@@ -553,6 +556,8 @@ func (a *Agent) InitPlugins(ctx context.Context) error {
 // Returns the outputs from AgentFinishAction if successful.
 func (a *Agent) RunUntilDone(ctx context.Context) (map[string]string, error) {
 	slog.Info("Starting CodeAct agent sub-task", "conversation_id", a.ConversationID)
+	slog.Debug("Creating agent controller", "sid", a.ConversationID)
+
 	if err := a.InitPlugins(ctx); err != nil {
 		return nil, err
 	}
