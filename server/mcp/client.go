@@ -103,6 +103,7 @@ func (c *MCPClient) Connect(ctx context.Context) error {
 	c.notify("notifications/initialized", nil)
 
 	slog.Debug("Merged custom MCP Config", "command", c.Command)
+	slog.Debug("Added default MCP HTTP server to config")
 	slog.Debug("MCP configuration after setup", "tools_count", len(c.Tools))
 
 	return nil

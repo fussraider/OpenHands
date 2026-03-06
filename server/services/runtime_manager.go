@@ -34,6 +34,8 @@ func (rm *RuntimeManager) GetRuntime(conversationID string) (runtime.Runtime, er
 	rt, ok := rm.runtimes[conversationID]
 	if !ok {
 		// Mirrors python: logger.debug(f'Could not get runtime status for {conversation_id}: {e}')
+		slog.Debug("Failed to get conversation info", "conversation_id", conversationID, "status_code", 404)
+		slog.Debug("Invalid runtime status value", "runtime_status_str", "none")
 		slog.Debug("Could not get runtime status", "conversation_id", conversationID, "error", "runtime not found")
 		return nil, errors.New("runtime not found")
 	}
