@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -106,6 +107,7 @@ func LoadConfig() error {
 		if err := toml.Unmarshal(data, AppConfig); err != nil {
 			return err
 		}
+		slog.Debug("Loaded configuration", "config_file", "config.toml")
 	} else if !os.IsNotExist(err) {
 		return err
 	}

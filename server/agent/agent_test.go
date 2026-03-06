@@ -27,6 +27,8 @@ func (m *MockRuntime) Close() error                      { return nil }
 func (m *MockRuntime) GetCwd(ctx context.Context) (string, error) { return "/mock/cwd", nil }
 func (m *MockRuntime) CopyFileToContainer(ctx context.Context, hostPath string, containerPath string) error { return nil }
 func (m *MockRuntime) CopyFileFromContainer(ctx context.Context, containerPath string, hostPath string) error { return nil }
+func (m *MockRuntime) GetVSCodeURL() *string { return nil }
+func (m *MockRuntime) GetWebHosts() map[string]interface{} { return nil }
 
 func TestEventsToMessages(t *testing.T) {
 	// Setup

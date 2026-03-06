@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"crypto/aes"
+	"log/slog"
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/base64"
@@ -286,5 +287,8 @@ func GetSecret(key string) (string, bool) {
 		// For safety, return the encrypted string or empty.
 		return "", false
 	}
+
+	slog.Debug("Loaded token from secret store", "secret_name", key)
+
 	return decryptedValue, true
 }
