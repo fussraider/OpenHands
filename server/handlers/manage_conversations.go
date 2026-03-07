@@ -18,7 +18,7 @@ func GetMicroagentManagementConversationsHandler(w http.ResponseWriter, r *http.
 	// though Python expects selected_repository filter.
 
 	allConversations := ConversationStore.ListConversations()
-	var filtered []models.ConversationInfo
+	filtered := []models.ConversationInfo{}
 
 	for _, conv := range allConversations {
 		// Filter by trigger = MICROAGENT_MANAGEMENT
