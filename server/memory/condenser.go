@@ -2,6 +2,7 @@ package memory
 
 import (
 	"context"
+	"log/slog"
 	"openhands-go/server/events"
 	"openhands-go/server/models"
 
@@ -75,6 +76,11 @@ func (c *TokenCondenser) Condense(ctx context.Context, history []events.Event) (
 	}
 
 	condensed = append(condensed, history[startTail:]...)
+
+	removedCount := len(history) - len(condensed)
+	if removedCount > 0 {
+		slog.Debug("Removed dangling observation(s)", "count", removedCount)
+	}
 
 	return condensed, nil
 }

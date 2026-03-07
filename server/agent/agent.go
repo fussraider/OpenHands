@@ -232,10 +232,14 @@ func (a *Agent) Step(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("LLM completion error: %w", err)
 	}
+	slog.Debug("Response from LLM", "content", resp.Content)
 
 	// 3. Handle Tool Calls
 	if len(resp.ToolCalls) > 0 {
 		for _, tc := range resp.ToolCalls {
+			slog.Debug("Tool call in function_calling.py:", "name", tc.FunctionCall.Name, "args", tc.FunctionCall.Arguments)
+			slog.Debug("TOOL CALL:", "name", tc.FunctionCall.Name, "code", tc.FunctionCall.Arguments)
+
 			handled := false
 
 			// Built-in tools

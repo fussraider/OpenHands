@@ -3,6 +3,7 @@ package llm
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"openhands-go/server/config"
 
 	"github.com/tmc/langchaingo/llms"
@@ -33,10 +34,18 @@ func NewLLMService(cfg config.LLMConfig) (*LLMService, error) {
 		// We have to pass them in GenerateContent.
 		// However, we can store them in LLMService and apply them in CompleteWithTools.
 
+		if cfg.BaseURL != "" {
+			slog.Debug("Rewrote openhands model URL", "model", cfg.Model, "base_url", cfg.BaseURL)
+		}
+
 		model, err = openai.New(opts...)
 		if err != nil {
+			slog.Debug("Error getting model info", "error", err)
 			return nil, err
 		}
+
+		slog.Debug("Got model info from litellm proxy", "model", cfg.Model)
+		slog.Debug("LLM: model supports function calling", "model", cfg.Model)
 	}
 
 	return &LLMService{
@@ -133,10 +142,13 @@ func (s *LLMService) CompleteWithTools(ctx context.Context, messages []Message, 
 	}
 
 	if len(completion.Choices) == 0 {
+		slog.Debug("No completion messages!")
 		return nil, fmt.Errorf("no choices in LLM response")
 	}
 
 	choice := completion.Choices[0]
+	slog.Debug("Cost calculation not supported for this model.", "model", s.config.Model)
+
 	return &ToolCallResponse{
 		Content:   choice.Content,
 		ToolCalls: choice.ToolCalls,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -85,7 +86,11 @@ func (r *LocalRuntime) Execute(ctx context.Context, command string, args ...stri
 		cmdStr = command + " " + strings.Join(args, " ")
 	}
 
-	return r.shell.Execute(ctx, cmdStr)
+	slog.Debug("Executing command:", "command", cmdStr)
+	out, exitCode, err := r.shell.Execute(ctx, cmdStr)
+	slog.Debug("Command finished", "exit_code", exitCode)
+
+	return out, exitCode, err
 }
 
 func (r *LocalRuntime) Write(p []byte) (n int, err error) {

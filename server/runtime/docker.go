@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"log/slog"
 	"openhands-go/server/config"
 	"os"
 	"path/filepath"
@@ -161,7 +162,11 @@ func (r *DockerRuntime) Execute(ctx context.Context, command string, args ...str
 		cmdStr = command + " " + strings.Join(args, " ")
 	}
 
-	return r.shell.Execute(ctx, cmdStr)
+	slog.Debug("Executing command:", "command", cmdStr)
+	out, exitCode, err := r.shell.Execute(ctx, cmdStr)
+	slog.Debug("Command finished", "exit_code", exitCode)
+
+	return out, exitCode, err
 }
 
 func (r *DockerRuntime) Write(p []byte) (n int, err error) {

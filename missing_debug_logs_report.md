@@ -1,8 +1,8 @@
 # Missing Debug Logs Report (Python vs Go)
 
 Total Python debug logs parsed: 340
-Total Go debug logs parsed: 42
-Missing in Go: 279
+Total Go debug logs parsed: 63
+Missing in Go: 253
 
 ## Unported Logs
 
@@ -10,13 +10,8 @@ Missing in Go: 279
 | --- | --- |
 | `openhands/agenthub/codeact_agent/codeact_agent.py` | `Using condenser: {}` |
 | `openhands/agenthub/codeact_agent/codeact_agent.py` | `Processing {} events from a total of {} events` |
-| `openhands/agenthub/codeact_agent/codeact_agent.py` | `Response from LLM: {}` |
 | `openhands/agenthub/codeact_agent/codeact_agent.py` | `Actions after response_to_actions: {}` |
-| `openhands/agenthub/codeact_agent/function_calling.py` | `Tool call in function_calling.py: {}` |
-| `openhands/agenthub/loc_agent/function_calling.py` | `Tool call in function_calling.py: {}` |
-| `openhands/agenthub/loc_agent/function_calling.py` | `TOOL CALL: {} with code: {}` |
 | `openhands/agenthub/loc_agent/loc_agent.py` | `TOOLS loaded for LocAgent: {` |
-| `openhands/agenthub/readonly_agent/function_calling.py` | `Tool call in function_calling.py: {}` |
 | `openhands/agenthub/readonly_agent/readonly_agent.py` | `TOOLS loaded for ReadOnlyAgent: {` |
 | `openhands/app_server/app_conversation/app_conversation_service_base.py` | `Loading skills for V1 conversation via agent-server` |
 | `openhands/app_server/app_conversation/live_status_app_conversation_service.py` | `Added custom SSE server: {} for {}` |
@@ -82,38 +77,20 @@ Missing in Go: 279
 | `openhands/integrations/provider.py` | `[Azure DevOps] URL-encoded parts - org: {}, project: {}, repo: {}` |
 | `openhands/integrations/service_types.py` | `No .cursorrules file found in {}` |
 | `openhands/llm/async_llm.py` | `LLM request cancelled by user.` |
-| `openhands/llm/debug_mixin.py` | `No completion messages!` |
-| `openhands/llm/debug_mixin.py` | `No completion messages!` |
-| `openhands/llm/llm.py` | `LLM: model has vision enabled` |
 | `openhands/llm/llm.py` | `LLM: caching prompt enabled` |
-| `openhands/llm/llm.py` | `LLM: model supports function calling` |
-| `openhands/llm/llm.py` | `Rewrote openhands/{} to {} with base URL {}` |
 | `openhands/llm/llm.py` | `Gemini model {} with reasoning_effort {}` |
 | `openhands/llm/llm.py` | `Gemini model {} with reasoning_effort {} mapped to thinking {kwargs.get(` |
-| `openhands/llm/llm.py` | `Error getting model info: {}` |
-| `openhands/llm/llm.py` | `Got model info from litellm proxy: {}` |
 | `openhands/llm/llm.py` | `Model info: {json.dumps({` |
 | `openhands/llm/llm.py` | `Setting top_p to 0.9 for Hugging Face model: {}` |
 | `openhands/llm/llm.py` | `Using context window: {}` |
 | `openhands/llm/llm.py` | `Using custom cost per token: {}` |
 | `openhands/llm/llm.py` | `Got response_cost from response: {}` |
-| `openhands/llm/llm.py` | `Error getting cost from litellm: {}` |
 | `openhands/llm/llm.py` | `Using fallback model name {} to get cost: {}` |
-| `openhands/llm/llm.py` | `Cost calculation not supported for this model.` |
 | `openhands/llm/router/base.py` | `RouterLLM routing to {} ({})` |
 | `openhands/llm/streaming_llm.py` | `LLM request cancelled by user.` |
-| `openhands/mcp/utils.py` | `Successfully connected to MCP stdio server {} -` |
 | `openhands/mcp/utils.py` | `Set SHTTP server timeout to {}s` |
-| `openhands/mcp/utils.py` | `Successfully connected to MCP STTP server {} -` |
 | `openhands/mcp/utils.py` | `Creating MCP clients with config: {}` |
 | `openhands/mcp/utils.py` | `No MCP clients were successfully connected` |
-| `openhands/mcp/utils.py` | `MCP tools: {}` |
-| `openhands/mcp/utils.py` | `MCP action received: {}` |
-| `openhands/mcp/utils.py` | `MCP clients: {}` |
-| `openhands/mcp/utils.py` | `MCP action name: {}` |
-| `openhands/mcp/utils.py` | `MCP client tools: {}` |
-| `openhands/mcp/utils.py` | `Matching client: {}` |
-| `openhands/mcp/utils.py` | `MCP response: {}` |
 | `openhands/memory/condenser/impl/conversation_window_condenser.py` | `Removed {} dangling observation(s)` |
 | `openhands/memory/conversation_memory.py` | `Visual browsing: {}` |
 | `openhands/memory/conversation_memory.py` | `IPython observation has image URLs but none are valid` |
@@ -133,7 +110,6 @@ Missing in Go: 279
 | `openhands/runtime/action_execution_server.py` | `All plugins initialized` |
 | `openhands/runtime/action_execution_server.py` | `AgentSkills initialized: {}` |
 | `openhands/runtime/action_execution_server.py` | `Runtime client initialized.` |
-| `openhands/runtime/action_execution_server.py` | `Executing init command: {}` |
 | `openhands/runtime/action_execution_server.py` | `Init command outputs (exit code: {}): {}` |
 | `openhands/runtime/action_execution_server.py` | `Bash init commands completed` |
 | `openhands/runtime/action_execution_server.py` | `{} != {} -> reset Jupyter PWD` |
@@ -165,7 +141,6 @@ Missing in Go: 279
 | `openhands/runtime/builder/docker.py` | `Removed old cache file: {}` |
 | `openhands/runtime/builder/docker.py` | `Created cache directory: {}` |
 | `openhands/runtime/builder/docker.py` | `Cache directory {} is usable` |
-| `openhands/runtime/builder/remote.py` | `Successfully built {status_data[` |
 | `openhands/runtime/builder/remote.py` | `Image {} exists.` |
 | `openhands/runtime/builder/remote.py` | `Image {} does not exist.` |
 | `openhands/runtime/impl/cli/cli_runtime.py` | `Details: {}` |
@@ -268,7 +243,6 @@ Missing in Go: 279
 | `openhands/runtime/utils/runtime_init.py` | `Created working directory. Output: [{}]` |
 | `openhands/runtime/utils/windows_bash.py` | `Imported clr module from: {}` |
 | `openhands/runtime/utils/windows_bash.py` | `Loaded PowerShell SDK (Desktop): {}` |
-| `openhands/runtime/utils/windows_bash.py` | `Successfully set initial runspace CWD to {}` |
 | `openhands/runtime/utils/windows_bash.py` | `Confirmed runspace CWD is {}` |
 | `openhands/runtime/utils/windows_bash.py` | `Running PS command:` |
 | `openhands/security/grayswan/analyzer.py` | `Event stream set for GraySwanAnalyzer` |
