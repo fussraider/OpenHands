@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"bytes"
 	"encoding/json"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -54,6 +56,60 @@ func TestListFilesHandler(t *testing.T) {
 	}
 	if !found {
 		t.Errorf("test.txt not found in file list: %v", files)
+	}
+}
+
+func TestUploadFilesHandler(t *testing.T) {
+	// Setup test workspace
+	tmpDir, err := os.MkdirTemp("", "openhands_test_workspace_*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	oldWorkspace := workspaceDir
+	workspaceDir = tmpDir
+	defer func() { workspaceDir = oldWorkspace }()
+
+	// Create a multipart form buffer
+	body := new(bytes.Buffer)
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile("files", "upload.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	part.Write([]byte("uploaded content"))
+	writer.Close()
+
+	req, err := http.NewRequest("POST", "/api/conversations/123/upload-files", body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(UploadFilesHandler)
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("expected status 200, got %d", rr.Code)
+	}
+
+	var response map[string]interface{}
+	json.NewDecoder(rr.Body).Decode(&response)
+
+	uploaded := response["uploaded_files"].([]interface{})
+	if len(uploaded) != 1 || uploaded[0].(string) != "upload.txt" {
+		t.Errorf("unexpected uploaded files response: %v", response)
+	}
+
+	// Verify file exists on disk
+	content, err := os.ReadFile(filepath.Join(tmpDir, "upload.txt"))
+	if err != nil {
+		t.Errorf("failed to read uploaded file: %v", err)
+	}
+	if string(content) != "uploaded content" {
+		t.Errorf("expected file content 'uploaded content', got '%s'", string(content))
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -85,7 +86,11 @@ func (r *LocalRuntime) Execute(ctx context.Context, command string, args ...stri
 		cmdStr = command + " " + strings.Join(args, " ")
 	}
 
-	return r.shell.Execute(ctx, cmdStr)
+	slog.Debug("Executing command:", "command", cmdStr)
+	out, exitCode, err := r.shell.Execute(ctx, cmdStr)
+	slog.Debug("Command finished", "exit_code", exitCode)
+
+	return out, exitCode, err
 }
 
 func (r *LocalRuntime) Write(p []byte) (n int, err error) {
@@ -181,6 +186,16 @@ func (r *LocalRuntime) CopyFileFromContainer(ctx context.Context, containerPath 
 
 	_, err = io.Copy(destination, source)
 	return err
+}
+
+func (r *LocalRuntime) GetVSCodeURL() *string {
+	// Not natively supported in basic mock local runtime yet.
+	return nil
+}
+
+func (r *LocalRuntime) GetWebHosts() map[string]interface{} {
+	// Not natively supported in basic mock local runtime yet.
+	return make(map[string]interface{})
 }
 
 func (r *LocalRuntime) Close() error {

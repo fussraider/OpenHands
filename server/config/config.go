@@ -1,10 +1,12 @@
 package config
 
 import (
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strconv"
 
+	"github.com/joho/godotenv"
 	"github.com/pelletier/go-toml/v2"
 )
 
@@ -68,6 +70,9 @@ type GithubConfig struct {
 var AppConfig *Config
 
 func LoadConfig() error {
+	// Attempt to load .env file if it exists, ignoring errors if it doesn't
+	_ = godotenv.Load()
+
 	// Default config
 	AppConfig = &Config{
 		AppMode: AppModeOpenHands,
@@ -102,6 +107,7 @@ func LoadConfig() error {
 		if err := toml.Unmarshal(data, AppConfig); err != nil {
 			return err
 		}
+		slog.Debug("Loaded configuration", "config_file", "config.toml")
 	} else if !os.IsNotExist(err) {
 		return err
 	}

@@ -22,10 +22,11 @@ type Settings struct {
 	SandboxAPIKey                string  `json:"sandbox_api_key,omitempty"`
 	MaxBudgetPerTask             float64 `json:"max_budget_per_task,omitempty"`
 	CondenserMaxSize             int     `json:"condenser_max_size,omitempty"`
-	Email                        string  `json:"email,omitempty"`
-	EmailVerified                bool    `json:"email_verified,omitempty"`
-	GitUserName                  string  `json:"git_user_name,omitempty"`
-	GitUserEmail                 string  `json:"git_user_email,omitempty"`
+	Email                        string            `json:"email,omitempty"`
+	EmailVerified                bool              `json:"email_verified,omitempty"`
+	GitUserName                  string            `json:"git_user_name,omitempty"`
+	GitUserEmail                 string            `json:"git_user_email,omitempty"`
+	ProviderTokensSet            map[string]string `json:"provider_tokens_set"`
 }
 
 func DefaultSettings() Settings {
@@ -36,5 +37,6 @@ func DefaultSettings() Settings {
 		EnableDefaultCondenser:    true,
 		EnableProactiveStarter:    true,
 		EnableSolvabilityAnalysis: true,
+		ProviderTokensSet:         make(map[string]string),
 	}
 }

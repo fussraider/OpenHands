@@ -3,7 +3,7 @@ package events
 import (
 	"bufio"
 	"encoding/json"
-	"fmt"
+	"log/slog"
 	"openhands-go/server/models"
 	"os"
 	"path/filepath"
@@ -158,8 +158,12 @@ func (es *EventStream) loadEvents() {
 		if err := json.Unmarshal(scanner.Bytes(), &event); err == nil {
 			es.events = append(es.events, event)
 		} else {
-			fmt.Printf("Error loading event: %v\n", err)
+			slog.Debug("Error loading event", "error", err)
 		}
+	}
+
+	if len(es.events) == 0 {
+		slog.Debug("No events found for session", "sid", es.conversationID, "dir", es.filePath)
 	}
 }
 

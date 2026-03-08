@@ -3,6 +3,8 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"log/slog"
 	"net/http"
 	"openhands-go/server/models"
 	"openhands-go/server/store"
@@ -15,8 +17,76 @@ func SearchConversationsHandler(w http.ResponseWriter, r *http.Request) {
 	if conversations == nil {
 		conversations = []models.ConversationInfo{} // Ensure we return [] instead of null
 	}
+
+	response := map[string]interface{}{
+		"results":      conversations,
+		"next_page_id": nil,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(conversations)
+	json.NewEncoder(w).Encode(response)
+}
+
+func GetWebHostsHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "conversation id required", http.StatusBadRequest)
+		return
+	}
+
+	hosts := map[string]interface{}{}
+	if RuntimeManager != nil {
+		rt, err := RuntimeManager.GetRuntime(id)
+		if err == nil {
+			slog.Debug("Runtime type", "type", fmt.Sprintf("%T", rt))
+			hosts = rt.GetWebHosts()
+			slog.Debug("Runtime hosts", "hosts", hosts)
+		}
+	}
+
+	response := map[string]interface{}{
+		"hosts": hosts,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+func GetConversationConfigHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "conversation id required", http.StatusBadRequest)
+		return
+	}
+
+	response := map[string]interface{}{
+		"runtime_id": id,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+func GetConversationEventsHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "conversation id required", http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode([]interface{}{})
+}
+
+func ExpConfigHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "conversation id required", http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 
 func NewConversationHandler(w http.ResponseWriter, r *http.Request) {
@@ -54,6 +124,225 @@ func NewConversationHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(conversation)
+}
+
+func AddMessageHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "conversation id required", http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		Message string `json:"message"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if ActionService != nil {
+		actionReq := models.ActionRequest{
+			Action: "message",
+			Args:   req.Message,
+		}
+		// Context from request since this is just an append operation
+		_, err := ActionService.ExecuteAction(r.Context(), id, actionReq)
+		if err != nil {
+			http.Error(w, "Failed to add message: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+}
+
+func GetConversationMicroagentsHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "conversation id required", http.StatusBadRequest)
+		return
+	}
+
+	// MVP: For now we return an empty array to satisfy the frontend schema.
+	// In the future this should fetch active microagents from the agent loop's memory.
+	response := map[string]interface{}{
+		"microagents": []interface{}{},
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+func GetRememberPromptHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "conversation id required", http.StatusBadRequest)
+		return
+	}
+
+	response := map[string]interface{}{
+		"status": "success",
+		"prompt": "", // Dummy MVP prompt
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+func GetVSCodeURLHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "conversation id required", http.StatusBadRequest)
+		return
+	}
+
+	var vscodeURL *string = nil
+
+	if RuntimeManager != nil {
+		rt, err := RuntimeManager.GetRuntime(id)
+		if err == nil {
+			slog.Debug("Runtime type", "type", fmt.Sprintf("%T", rt))
+			vscodeURL = rt.GetVSCodeURL()
+			if vscodeURL != nil {
+				slog.Debug("Runtime VSCode URL", "url", *vscodeURL)
+			} else {
+				slog.Debug("Runtime VSCode URL", "url", "nil")
+			}
+		}
+	}
+
+	response := map[string]interface{}{
+		"vscode_url": vscodeURL,
+		"error":      "",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+func StartConversationHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "conversation id required", http.StatusBadRequest)
+		return
+	}
+
+	conversation, err := ConversationStore.GetConversation(id)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	ctx := context.Background()
+
+	// Ensure runtime is created if not exists
+	_, err = RuntimeManager.GetRuntime(id)
+	if err != nil {
+		_, err = RuntimeManager.CreateRuntime(ctx, id)
+		if err != nil {
+			http.Error(w, "Failed to create runtime: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Ensure agent loop is started
+	es := ActionService.GetEventStream(id)
+	err = RuntimeManager.StartAgent(ctx, id, es)
+	if err != nil {
+		http.Error(w, "Failed to start agent: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(conversation)
+}
+
+func StopConversationHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "conversation id required", http.StatusBadRequest)
+		return
+	}
+
+	conversation, err := ConversationStore.GetConversation(id)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	if RuntimeManager != nil {
+		err = RuntimeManager.StopRuntime(id)
+		if err != nil {
+			http.Error(w, "Failed to stop runtime: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(conversation)
+}
+
+func UpdateConversationHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "conversation id required", http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		Title string `json:"title"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if req.Title == "" {
+		http.Error(w, "title is required", http.StatusBadRequest)
+		return
+	}
+
+	err := ConversationStore.UpdateConversation(id, req.Title)
+	if err != nil {
+		if err.Error() == "conversation not found" {
+			http.NotFound(w, r)
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(true)
+}
+
+func DeleteConversationHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "conversation id required", http.StatusBadRequest)
+		return
+	}
+
+	err := ConversationStore.DeleteConversation(id)
+	if err != nil {
+		if err.Error() == "conversation not found" {
+			http.NotFound(w, r)
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Also stop the agent loop / runtime if it exists
+	if RuntimeManager != nil {
+		RuntimeManager.StopRuntime(id)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 
 func GetConversationHandler(w http.ResponseWriter, r *http.Request) {

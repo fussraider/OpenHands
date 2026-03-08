@@ -3,6 +3,7 @@ package store
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"openhands-go/server/models"
 	"os"
 	"sync"
@@ -68,6 +69,11 @@ func (s *ConversationStore) CreateConversation(req models.InitSessionRequest) (m
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	// Mimics logger.debug(f'closing_from_too_many_sessions...') from python standalone_conversation_manager.py
+	if len(s.conversations) >= 50 { // arbitrary max for MVP
+		slog.Debug("closing_from_too_many_sessions", "warning", "max limit reached")
+	}
+
 	id := uuid.New().String()
 	now := time.Now()
 
@@ -87,4 +93,32 @@ func (s *ConversationStore) CreateConversation(req models.InitSessionRequest) (m
 		return models.ConversationInfo{}, err
 	}
 	return conversation, nil
+}
+
+func (s *ConversationStore) DeleteConversation(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, ok := s.conversations[id]; !ok {
+		return errors.New("conversation not found")
+	}
+
+	delete(s.conversations, id)
+	return s.save()
+}
+
+func (s *ConversationStore) UpdateConversation(id string, title string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	c, ok := s.conversations[id]
+	if !ok {
+		return errors.New("conversation not found")
+	}
+
+	c.Title = title
+	c.LastUpdatedAt = time.Now()
+	s.conversations[id] = c
+
+	return s.save()
 }

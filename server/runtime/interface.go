@@ -21,6 +21,9 @@ type Runtime interface {
 	// CopyFileFromContainer copies a file from the runtime container to the local host
 	CopyFileFromContainer(ctx context.Context, containerPath string, hostPath string) error
 
+	GetVSCodeURL() *string
+	GetWebHosts() map[string]interface{}
+
 	// Future methods for parity with Python
 	// RunAction(action Action) (Observation, error)
 	// ReadFile(path string) ([]byte, error)

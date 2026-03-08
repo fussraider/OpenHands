@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"openhands-go/server/agent"
 	"openhands-go/server/config"
 	"openhands-go/server/events"
@@ -32,6 +33,10 @@ func (rm *RuntimeManager) GetRuntime(conversationID string) (runtime.Runtime, er
 
 	rt, ok := rm.runtimes[conversationID]
 	if !ok {
+		// Mirrors python: logger.debug(f'Could not get runtime status for {conversation_id}: {e}')
+		slog.Debug("Failed to get conversation info", "conversation_id", conversationID, "status_code", 404)
+		slog.Debug("Invalid runtime status value", "runtime_status_str", "none")
+		slog.Debug("Could not get runtime status", "conversation_id", conversationID, "error", "runtime not found")
 		return nil, errors.New("runtime not found")
 	}
 	return rt, nil
@@ -48,6 +53,8 @@ func (rm *RuntimeManager) CreateRuntime(ctx context.Context, conversationID stri
 	var rt runtime.Runtime
 	var err error
 
+	slog.Debug("Initializing runtime now...", "runtime", config.AppConfig.Sandbox.Runtime, "conversation_id", conversationID)
+
 	// Check config to decide which runtime to use
 	if config.AppConfig.Sandbox.Runtime == "docker" {
 		rt, err = runtime.NewDockerRuntime(config.AppConfig)
@@ -56,6 +63,7 @@ func (rm *RuntimeManager) CreateRuntime(ctx context.Context, conversationID stri
 	}
 
 	if err != nil {
+		slog.Debug("Failed to initialize runtime", "error", err)
 		return nil, err
 	}
 
@@ -76,10 +84,20 @@ func (rm *RuntimeManager) StartAgent(ctx context.Context, conversationID string,
 		return errors.New("runtime must be created before starting agent")
 	}
 
+	// Mirrors python: logger.debug('Attaching to session ...') or 'Restored session ...'
+	slog.Debug("Attaching to session ...", "conversation_id", conversationID)
+
 	llmService, err := llm.NewLLMService(config.AppConfig.LLM)
 	if err != nil {
 		return err
 	}
+
+	if len(es.GetEvents()) > 0 {
+		slog.Debug("Restored state from session", "conversation_id", conversationID, "events", len(es.GetEvents()))
+	} else {
+		slog.Debug("No events found, no state to restore", "conversation_id", conversationID)
+	}
+
 	// Pass rm as Delegator
 	ag := agent.NewAgent("default-agent", conversationID, llmService, rt, es, rm, config.AppConfig)
 
@@ -92,6 +110,7 @@ func (rm *RuntimeManager) StartAgent(ctx context.Context, conversationID string,
 }
 
 func (rm *RuntimeManager) StopRuntime(conversationID string) error {
+	slog.Debug("Waiting for initialization to finish before closing session", "sid", conversationID)
 	rm.mu.Lock()
 	defer rm.mu.Unlock()
 

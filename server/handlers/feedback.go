@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"openhands-go/server/config"
 	"os"
@@ -30,6 +31,8 @@ func SubmitFeedbackHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	slog.Debug("Got feedback", "email", req.Email, "polarity", req.Polarity, "permissions", req.Permissions)
+
 	// Store feedback in file
 	if config.AppConfig.FileStorePath != "" {
 		feedbackPath := filepath.Join(config.AppConfig.FileStorePath, "feedback.jsonl")
@@ -43,6 +46,7 @@ func SubmitFeedbackHandler(w http.ResponseWriter, r *http.Request) {
 			data, _ := json.Marshal(req)
 			f.Write(data)
 			f.Write([]byte("\n"))
+			slog.Debug("Stored feedback", "path", feedbackPath)
 		}
 	}
 

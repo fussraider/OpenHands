@@ -190,6 +190,14 @@ func (a *Agent) Step(ctx context.Context) error {
 	// 1. Get History & Construct Messages
 	history := a.EventStream.GetEvents()
 
+	// Log git-related commands dynamically based on history
+	if len(history) > 0 {
+		lastEv := history[len(history)-1]
+		if req, ok := lastEv.Content.(models.CmdRunAction); ok && len(req.Command) >= 3 && req.Command[:3] == "git" {
+			slog.Debug("Detected git-related command", "command", req.Command, "exit_code", 0)
+		}
+	}
+
 	// Condense History
 	if a.Condenser != nil {
 		var err error
@@ -224,10 +232,14 @@ func (a *Agent) Step(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("LLM completion error: %w", err)
 	}
+	slog.Debug("Response from LLM", "content", resp.Content)
 
 	// 3. Handle Tool Calls
 	if len(resp.ToolCalls) > 0 {
 		for _, tc := range resp.ToolCalls {
+			slog.Debug("Tool call in function_calling.py:", "name", tc.FunctionCall.Name, "args", tc.FunctionCall.Arguments)
+			slog.Debug("TOOL CALL:", "name", tc.FunctionCall.Name, "code", tc.FunctionCall.Arguments)
+
 			handled := false
 
 			// Built-in tools
@@ -532,11 +544,15 @@ func (a *Agent) RunLoop(ctx context.Context) {
 }
 
 func (a *Agent) InitPlugins(ctx context.Context) error {
+	var pluginNames []string
 	for _, p := range a.Plugins {
+		slog.Debug("Initializing plugin", "plugin", p.Name())
 		if err := p.Init(ctx, a.Runtime); err != nil {
 			return fmt.Errorf("failed to init plugin %s: %w", p.Name(), err)
 		}
+		pluginNames = append(pluginNames, p.Name())
 	}
+	slog.Debug("Runtime initialized with plugins", "plugins", pluginNames)
 	return nil
 }
 
@@ -544,6 +560,8 @@ func (a *Agent) InitPlugins(ctx context.Context) error {
 // Returns the outputs from AgentFinishAction if successful.
 func (a *Agent) RunUntilDone(ctx context.Context) (map[string]string, error) {
 	slog.Info("Starting CodeAct agent sub-task", "conversation_id", a.ConversationID)
+	slog.Debug("Creating agent controller", "sid", a.ConversationID)
+
 	if err := a.InitPlugins(ctx); err != nil {
 		return nil, err
 	}

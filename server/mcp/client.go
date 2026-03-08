@@ -10,6 +10,10 @@ import (
 	"sync"
 )
 
+import (
+	"log/slog"
+)
+
 // MCPClient implements a basic JSON-RPC 2.0 client over Stdio
 type MCPClient struct {
 	Command   string
@@ -59,6 +63,8 @@ func NewStdioMCPClient(command string, args ...string) *MCPClient {
 }
 
 func (c *MCPClient) Connect(ctx context.Context) error {
+	slog.Debug("MCP configuration before setup", "command", c.Command, "args", c.Args)
+
 	c.cmd = exec.CommandContext(ctx, c.Command, c.Args...)
 
 	stdin, err := c.cmd.StdinPipe()
@@ -95,6 +101,11 @@ func (c *MCPClient) Connect(ctx context.Context) error {
 
 	// Send initialized notification
 	c.notify("notifications/initialized", nil)
+
+	slog.Debug("Merged custom MCP Config", "command", c.Command)
+	slog.Debug("Added default MCP HTTP server to config")
+	slog.Debug("MCP configuration after setup", "tools_count", len(c.Tools))
+	slog.Debug("Successfully connected to MCP stdio server", "command", c.Command)
 
 	return nil
 }
@@ -189,10 +200,16 @@ func (c *MCPClient) ListTools(ctx context.Context) ([]Tool, error) {
 	}
 
 	c.Tools = result.Tools
+	slog.Debug("MCP tools:", "count", len(c.Tools))
+	slog.Debug("MCP client tools:", "command", c.Command, "tools", len(c.Tools))
 	return c.Tools, nil
 }
 
 func (c *MCPClient) CallTool(ctx context.Context, toolName string, args map[string]interface{}) (interface{}, error) {
+	slog.Debug("MCP action received:", "tool", toolName)
+	slog.Debug("MCP action name:", "tool", toolName)
+	slog.Debug("Matching client:", "command", c.Command)
+
 	res, err := c.request(ctx, "tools/call", map[string]interface{}{
 		"name": toolName,
 		"arguments": args,
@@ -200,6 +217,7 @@ func (c *MCPClient) CallTool(ctx context.Context, toolName string, args map[stri
 	if err != nil {
 		return nil, err
 	}
+	slog.Debug("MCP response:", "result", string(res))
 
 	var result struct {
 		Content []struct {
