@@ -92,10 +92,12 @@ func (rm *RuntimeManager) StartAgent(ctx context.Context, conversationID string,
 		return err
 	}
 
+	slog.Debug("Trying to restore agent state from session if available", "conversation_id", conversationID)
+
 	if len(es.GetEvents()) > 0 {
 		slog.Debug("Restored state from session", "conversation_id", conversationID, "events", len(es.GetEvents()))
 	} else {
-		slog.Debug("No events found, no state to restore", "conversation_id", conversationID)
+		slog.Debug("Cannot restore agent state: no events found", "conversation_id", conversationID)
 	}
 
 	// Pass rm as Delegator

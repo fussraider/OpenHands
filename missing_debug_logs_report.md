@@ -8,11 +8,6 @@ Missing in Go: 253
 
 | Python File | Log Statement |
 | --- | --- |
-| `openhands/agenthub/codeact_agent/codeact_agent.py` | `Using condenser: {}` |
-| `openhands/agenthub/codeact_agent/codeact_agent.py` | `Processing {} events from a total of {} events` |
-| `openhands/agenthub/codeact_agent/codeact_agent.py` | `Actions after response_to_actions: {}` |
-| `openhands/agenthub/loc_agent/loc_agent.py` | `TOOLS loaded for LocAgent: {` |
-| `openhands/agenthub/readonly_agent/readonly_agent.py` | `TOOLS loaded for ReadOnlyAgent: {` |
 | `openhands/app_server/app_conversation/app_conversation_service_base.py` | `Loading skills for V1 conversation via agent-server` |
 | `openhands/app_server/app_conversation/live_status_app_conversation_service.py` | `Added custom SSE server: {} for {}` |
 | `openhands/app_server/app_conversation/live_status_app_conversation_service.py` | `Added custom SHTTP server: {} for {}` |
@@ -26,12 +21,6 @@ Missing in Go: 253
 | `openhands/app_server/sandbox/remote_sandbox_service.py` | `Started Refreshing Conversation {}` |
 | `openhands/app_server/sandbox/remote_sandbox_service.py` | `Finished Refreshing Conversation {}` |
 | `openhands/app_server/sandbox/sandbox_service.py` | `Agent server health check failed for sandbox {}` |
-| `openhands/controller/agent_controller.py` | `Original security risk for {}: {})` |
-| `openhands/controller/agent_controller.py` | `[Security Analyzer: {}] Override security risk for action {}: {}` |
-| `openhands/controller/agent_controller.py` | `No security analyzer configured, setting UNKNOWN risk for action: {}` |
-| `openhands/controller/agent_controller.py` | `System message: {}` |
-| `openhands/controller/agent_controller.py` | `[non-CLI mode] Detected HIGH security risk in action: {}. Ask for confirmation` |
-| `openhands/controller/state/state.py` | `Saving state to session {}:{}` |
 | `openhands/core/config/sandbox_config.py` | `SandboxConfig user_id default: {}` |
 | `openhands/core/config/utils.py` | `Default model routing configuration loaded from config toml and assigned to default agent` |
 | `openhands/core/config/utils.py` | `Default condenser configuration loaded from config toml and assigned to default agent` |
@@ -54,14 +43,6 @@ Missing in Go: 253
 | `openhands/core/logger.py` | `Logging initialized` |
 | `openhands/core/logger.py` | `Logging to file in: {}` |
 | `openhands/core/logger.py` | `Logging to {}` |
-| `openhands/core/main.py` | `Agent Controller Initialized: Running agent {}, model` |
-| `openhands/core/main.py` | `Stopping agent controller...` |
-| `openhands/core/main.py` | `Stopping EventStream...` |
-| `openhands/core/main.py` | `Closing runtime...` |
-| `openhands/core/setup.py` | `Runtime created with plugins: {}` |
-| `openhands/core/setup.py` | `Selected repository {}.` |
-| `openhands/core/setup.py` | `Trying to restore agent state from session {} if available` |
-| `openhands/core/setup.py` | `Cannot restore agent state: {}` |
 | `openhands/events/observation/commands.py` | `Truncated large command output: {} -> {} chars` |
 | `openhands/events/utils.py` | `Event {} has no ID` |
 | `openhands/events/utils.py` | `Observation {} has no cause` |

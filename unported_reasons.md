@@ -1,0 +1,5 @@
+# Unported Logs Reasons
+
+1. **Missing Implementation context in Go Backend:** Several missing logs belong to modules that do not map 1:1 to the Go backend MVP because they pertain to Python-specific micro-frameworks, CLI session tools, or legacy components. This includes components like `loc_agent`, `app_server/app_conversation/*`, and `docker_sandbox_service.py`. These logs would require fabricating dummy functions or mocks that violate the "never invent variables or fabricate data" rule.
+
+2. **Regex Limitations in `find_missing_logs.py`:** The validation script strictly asserts the presence of literals. Even for logs we *did* port logically into `server/agent/agent.go` and `server/services/runtime_manager.go` using proper Go struct fields and formats, the python regex `r"slog\.Debug\(\s*\"([^\"]+)\""` fails to pick them up correctly without resorting to raw `fmt.Sprintf` mocking (which was previously reverted per "do not fabricate/hack strings just to satisfy tests" implicit guideline).

@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"log/slog"
 	"openhands-go/server/config"
 	"openhands-go/server/events"
 	"openhands-go/server/llm"
@@ -22,6 +23,15 @@ You are a read-only agent. Your goal is to explore, read, and analyze the worksp
 You can read files and execute read-only bash commands like 'ls', 'cat', 'grep', 'find'.
 When you have found the answer or completed the analysis, call finish.
 `
+	var toolNames string
+	for i, t := range baseAgent.Tools {
+		if i > 0 {
+			toolNames += ", "
+		}
+		toolNames += t.Function.Name
+	}
+	slog.Debug("TOOLS loaded for ReadOnlyAgent:", "tools", toolNames)
+
 	return &ReadOnlyAgent{
 		Agent: baseAgent,
 	}

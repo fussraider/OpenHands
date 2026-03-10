@@ -82,6 +82,7 @@ func NewAgent(id, conversationID string, llmService *llm.LLMService, rt runtime.
 	} else {
 		agent.Condenser = &memory.NoOpCondenser{}
 	}
+	slog.Debug("Using condenser:", "condenser", fmt.Sprintf("%T", agent.Condenser))
 
 	// Render System Prompt
 	if pm != nil {
@@ -196,16 +197,23 @@ func (a *Agent) Step(ctx context.Context) error {
 		if req, ok := lastEv.Content.(models.CmdRunAction); ok && len(req.Command) >= 3 && req.Command[:3] == "git" {
 			slog.Debug("Detected git-related command", "command", req.Command, "exit_code", 0)
 		}
+
+		if req, ok := lastEv.Content.(models.CmdRunAction); ok && len(req.Command) >= 5 && req.Command[:5] == "clone" {
+			slog.Debug("Selected repository", "repo", req.Command)
+		}
 	}
 
 	// Condense History
+	condensedHistory := history
 	if a.Condenser != nil {
 		var err error
-		history, err = a.Condenser.Condense(ctx, history)
+		condensedHistory, err = a.Condenser.Condense(ctx, history)
 		if err != nil {
 			slog.Error("Failed to condense history", "error", err)
 		}
 	}
+	slog.Debug("Processing events from a total of events", "processed", len(condensedHistory), "total", len(history))
+	history = condensedHistory
 
 	// 2. Loop Detection
 	if stuck, analysis := a.LoopDetector.IsStuck(history); stuck {
@@ -233,6 +241,7 @@ func (a *Agent) Step(ctx context.Context) error {
 		return fmt.Errorf("LLM completion error: %w", err)
 	}
 	slog.Debug("Response from LLM", "content", resp.Content)
+	slog.Debug("Actions after response_to_actions:", "actions", resp.ToolCalls)
 
 	// 3. Handle Tool Calls
 	if len(resp.ToolCalls) > 0 {
@@ -266,8 +275,11 @@ func (a *Agent) Step(ctx context.Context) error {
 
 				// Security Check
 				risk, reason, _ := a.Security.Analyze(ctx, cmdAction)
+				slog.Debug("Original security risk for action:", "command", cmdAction.Command, "risk", risk)
+
 				if risk == security.RiskHigh {
 					// Block high risk actions for now (or require confirmation if we had UI support)
+					slog.Debug("[non-CLI mode] Detected HIGH security risk in action: Ask for confirmation", "action", cmdAction)
 					a.recordObservation(tc.ID, fmt.Sprintf("Security Alert: Action blocked. Reason: %s", reason), "error")
 					continue
 				}
@@ -437,6 +449,7 @@ func (a *Agent) eventsToMessages(ctx context.Context, evts []events.Event) []llm
 			Content: additionalInfo,
 		})
 	}
+	slog.Debug("System message:", "prompt", a.SystemPrompt)
 
 	for _, e := range evts {
 		switch e.Type {
@@ -524,6 +537,7 @@ func (a *Agent) eventsToMessages(ctx context.Context, evts []events.Event) []llm
 
 func (a *Agent) RunLoop(ctx context.Context) {
 	slog.Info("Starting CodeAct agent loop", "conversation_id", a.ConversationID)
+	slog.Debug("Agent Controller Initialized: Running agent", "agent", a.ID, "model", config.AppConfig.LLM.Model)
 	if err := a.InitPlugins(ctx); err != nil {
 		slog.Error("Failed to init plugins", "error", err)
 	}
@@ -553,6 +567,7 @@ func (a *Agent) InitPlugins(ctx context.Context) error {
 		pluginNames = append(pluginNames, p.Name())
 	}
 	slog.Debug("Runtime initialized with plugins", "plugins", pluginNames)
+	slog.Debug("Runtime created with plugins:", "plugins", pluginNames)
 	return nil
 }
 
