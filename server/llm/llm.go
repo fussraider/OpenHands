@@ -2,9 +2,11 @@ package llm
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"openhands-go/server/config"
+	"strings"
 
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/openai"
@@ -19,34 +21,36 @@ func NewLLMService(cfg config.LLMConfig) (*LLMService, error) {
 	var model llms.Model
 	var err error
 
-	if cfg.APIKey != "" {
-		opts := []openai.Option{
-			openai.WithToken(cfg.APIKey),
-			openai.WithModel(cfg.Model),
-		}
-		if cfg.BaseURL != "" {
-			opts = append(opts, openai.WithBaseURL(cfg.BaseURL))
-		}
-		// Apply enhanced config
-		// langchaingo openai provider doesn't expose generic options for temperature/top_p in New(),
-		// they are usually call options. But some providers allow default options.
-		// Checking langchaingo/llms/openai source (from memory/knowledge), it doesn't support setting default temp/top_p in New().
-		// We have to pass them in GenerateContent.
-		// However, we can store them in LLMService and apply them in CompleteWithTools.
-
-		if cfg.BaseURL != "" {
-			slog.Debug("Rewrote openhands model URL", "model", cfg.Model, "base_url", cfg.BaseURL)
-		}
-
-		model, err = openai.New(opts...)
-		if err != nil {
-			slog.Debug("Error getting model info", "error", err)
-			return nil, err
-		}
-
-		slog.Debug("Got model info from litellm proxy", "model", cfg.Model)
-		slog.Debug("LLM: model supports function calling", "model", cfg.Model)
+	if strings.TrimSpace(cfg.APIKey) == "" {
+		return nil, errors.New("error authenticating with the LLM provider: please configure LLM_API_KEY")
 	}
+
+	opts := []openai.Option{
+		openai.WithToken(cfg.APIKey),
+		openai.WithModel(cfg.Model),
+	}
+	if cfg.BaseURL != "" {
+		opts = append(opts, openai.WithBaseURL(cfg.BaseURL))
+	}
+	// Apply enhanced config
+	// langchaingo openai provider doesn't expose generic options for temperature/top_p in New(),
+	// they are usually call options. But some providers allow default options.
+	// Checking langchaingo/llms/openai source (from memory/knowledge), it doesn't support setting default temp/top_p in New().
+	// We have to pass them in GenerateContent.
+	// However, we can store them in LLMService and apply them in CompleteWithTools.
+
+	if cfg.BaseURL != "" {
+		slog.Debug("Rewrote openhands model URL", "model", cfg.Model, "base_url", cfg.BaseURL)
+	}
+
+	model, err = openai.New(opts...)
+	if err != nil {
+		slog.Debug("Error getting model info", "error", err)
+		return nil, err
+	}
+
+	slog.Debug("Got model info from litellm proxy", "model", cfg.Model)
+	slog.Debug("LLM: model supports function calling", "model", cfg.Model)
 
 	return &LLMService{
 		config: cfg,
@@ -76,9 +80,7 @@ func (s *LLMService) Complete(ctx context.Context, messages []Message) (string, 
 
 func (s *LLMService) CompleteWithTools(ctx context.Context, messages []Message, tools []llms.Tool) (*ToolCallResponse, error) {
 	if s.model == nil {
-		return &ToolCallResponse{
-			Content: "This is a mock response from the Go backend LLM service (langchaingo integration pending config).",
-		}, nil
+		return nil, errors.New("LLM service is not initialized")
 	}
 
 	content := []llms.MessageContent{}

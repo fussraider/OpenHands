@@ -243,7 +243,7 @@ func TestConversationAdditionalEndpoints(t *testing.T) {
 	id := created.ConversationID
 
 	// Microagents
-	req, _ := http.NewRequest("GET", "/api/conversations/" + id + "/microagents", nil)
+	req, _ := http.NewRequest("GET", "/api/conversations/"+id+"/microagents", nil)
 	req.SetPathValue("id", id)
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(GetConversationMicroagentsHandler)
@@ -253,7 +253,7 @@ func TestConversationAdditionalEndpoints(t *testing.T) {
 	}
 
 	// Remember Prompt
-	req, _ = http.NewRequest("GET", "/api/conversations/" + id + "/remember-prompt", nil)
+	req, _ = http.NewRequest("GET", "/api/conversations/"+id+"/remember-prompt", nil)
 	req.SetPathValue("id", id)
 	rr = httptest.NewRecorder()
 	handler = http.HandlerFunc(GetRememberPromptHandler)
@@ -270,6 +270,15 @@ func TestConversationAdditionalEndpoints(t *testing.T) {
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("GetVSCodeURLHandler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	// Global VSCode URL endpoint used by V1 UI
+	req, _ = http.NewRequest("GET", "/api/vscode/url", nil)
+	rr = httptest.NewRecorder()
+	handler = http.HandlerFunc(GetGlobalVSCodeURLHandler)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("GetGlobalVSCodeURLHandler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
 	// Web Hosts

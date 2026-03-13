@@ -324,7 +324,7 @@ Now, based on the new events provided, generate a prompt that will guide the AI 
 		start := strings.Index(respContent, "<update_prompt>")
 		end := strings.Index(respContent, "</update_prompt>")
 		if start != -1 && end != -1 && end > start {
-			prompt = strings.TrimSpace(respContent[start+len("<update_prompt>"):end])
+			prompt = strings.TrimSpace(respContent[start+len("<update_prompt>") : end])
 		} else {
 			prompt = strings.TrimSpace(respContent)
 		}
@@ -368,6 +368,22 @@ func GetVSCodeURLHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
+}
+
+// GetGlobalVSCodeURLHandler mirrors the Python runtime endpoint shape used by V1 UI code:
+// GET /api/vscode/url -> {"url": "..."}
+func GetGlobalVSCodeURLHandler(w http.ResponseWriter, r *http.Request) {
+	var vscodeURL *string
+
+	if RuntimeManager != nil {
+		rt, err := RuntimeManager.GetAnyRuntime()
+		if err == nil {
+			vscodeURL = rt.GetVSCodeURL()
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]*string{"url": vscodeURL})
 }
 
 func StartConversationHandler(w http.ResponseWriter, r *http.Request) {

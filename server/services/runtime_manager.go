@@ -52,6 +52,19 @@ func (rm *RuntimeManager) GetActiveRuntimes() []string {
 	return ids
 }
 
+// GetAnyRuntime returns one active runtime instance.
+// This is used by legacy endpoints that do not carry conversation identifiers.
+func (rm *RuntimeManager) GetAnyRuntime() (runtime.Runtime, error) {
+	rm.mu.RLock()
+	defer rm.mu.RUnlock()
+
+	for _, rt := range rm.runtimes {
+		return rt, nil
+	}
+
+	return nil, errors.New("runtime not found")
+}
+
 func (rm *RuntimeManager) CreateRuntime(ctx context.Context, conversationID string) (runtime.Runtime, error) {
 	rm.mu.Lock()
 	defer rm.mu.Unlock()
@@ -191,10 +204,10 @@ func (rm *RuntimeManager) Delegate(ctx context.Context, agentName string, inputs
 	// Create inputs message
 	taskDescription := fmt.Sprintf("You are a delegated agent working on: %s. Inputs: %v", agentName, inputs)
 	es.AddEvent(events.Event{
-		ID: "init",
+		ID:   "init",
 		Type: events.EventTypeAction,
 		Content: models.MessageAction{
-			Action: models.ActionTypeMessage,
+			Action:  models.ActionTypeMessage,
 			Content: taskDescription,
 		},
 		Source: "user",
