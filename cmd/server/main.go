@@ -72,8 +72,8 @@ func main() {
 			if textContent != "" && handlers.ActionService != nil {
 				es := handlers.ActionService.GetEventStream(conversationID)
 				es.AddEvent(events.Event{
-					ID:     uuid.New().String(),
-					Type:   events.EventTypeAction,
+					ID:   uuid.New().String(),
+					Type: events.EventTypeAction,
 					Content: models.ActionRequest{
 						Action: "message",
 						Args:   map[string]interface{}{"content": textContent},
@@ -108,6 +108,7 @@ func main() {
 	mux.HandleFunc("GET /api/conversations/{id}/microagents", handlers.GetConversationMicroagentsHandler)
 	mux.HandleFunc("GET /api/conversations/{id}/remember-prompt", handlers.GetRememberPromptHandler)
 	mux.HandleFunc("GET /api/conversations/{id}/vscode-url", handlers.GetVSCodeURLHandler)
+	mux.HandleFunc("GET /api/vscode/url", handlers.GetGlobalVSCodeURLHandler)
 	mux.HandleFunc("GET /api/conversations/{id}/web-hosts", handlers.GetWebHostsHandler)
 	mux.HandleFunc("GET /api/conversations/{id}/config", handlers.GetConversationConfigHandler)
 	mux.HandleFunc("GET /api/conversations/{id}/events", handlers.GetConversationEventsHandler)
