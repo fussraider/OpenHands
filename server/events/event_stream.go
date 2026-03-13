@@ -20,17 +20,58 @@ const (
 
 type Event struct {
 	ID        string      `json:"id"`
-	Type      EventType   `json:"type"`
+	Type      EventType   `json:"-"` // Not transmitted at top level by python
 	Timestamp time.Time   `json:"timestamp"`
-	Content   interface{} `json:"content"`
+	Content   interface{} `json:"-"`
 	Source    string      `json:"source"`
+}
+
+// MarshalJSON implements custom serialization to match Python backend structure.
+func (e Event) MarshalJSON() ([]byte, error) {
+	// Base structure
+	out := map[string]interface{}{
+		"id":        e.ID,
+		"timestamp": e.Timestamp.Format(time.RFC3339Nano),
+		"source":    e.Source,
+	}
+
+	contentBytes, err := json.Marshal(e.Content)
+	if err == nil {
+		var contentMap map[string]interface{}
+		json.Unmarshal(contentBytes, &contentMap)
+
+		if e.Type == EventTypeAction {
+			// Extract "action" mapping it to top-level, put rest in "args"
+			if actionVal, ok := contentMap["action"]; ok {
+				out["action"] = actionVal
+				delete(contentMap, "action")
+			}
+			out["args"] = contentMap
+		} else if e.Type == EventTypeObservation {
+			// Extract "observation", "content", put rest in "extras"
+			if obsVal, ok := contentMap["observation"]; ok {
+				out["observation"] = obsVal
+				delete(contentMap, "observation")
+			}
+			if cVal, ok := contentMap["content"]; ok {
+				out["content"] = cVal
+				delete(contentMap, "content")
+			}
+			out["extras"] = contentMap
+		} else {
+			// Fallback
+			for k, v := range contentMap {
+				out[k] = v
+			}
+		}
+	}
+	return json.Marshal(out)
 }
 
 // Custom unmarshalling to handle polymorphic Content
 func (e *Event) UnmarshalJSON(data []byte) error {
 	type Alias Event
 	aux := &struct {
-		Content json.RawMessage `json:"content"`
 		*Alias
 	}{
 		Alias: (*Alias)(e),
@@ -39,86 +80,90 @@ func (e *Event) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	if e.Type == EventTypeAction {
-		// Inspect "action" field
-		var probe struct {
-			Action models.ActionType `json:"action"`
-		}
-		if err := json.Unmarshal(aux.Content, &probe); err != nil {
-			// Fallback or error? For now fallback to generic map if probe fails (maybe message action string?)
-			// But wait, MessageAction is a struct.
-			// If it's just a string (legacy), we handle it.
-			var str string
-			if err := json.Unmarshal(aux.Content, &str); err == nil {
-				e.Content = str // Legacy string content
-				return nil
-			}
-			e.Content = aux.Content // Keep raw if unknown
-			return nil
+	var probe map[string]interface{}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+
+	if actionName, ok := probe["action"].(string); ok {
+		e.Type = EventTypeAction
+		var argsData []byte
+		if argsMap, ok := probe["args"]; ok {
+			argsData, _ = json.Marshal(argsMap)
+		} else {
+			// fallback check if args are flattened
+			argsData = data
 		}
 
-		switch probe.Action {
+		switch models.ActionType(actionName) {
 		case models.ActionTypeCmdRun:
 			var act models.CmdRunAction
-			json.Unmarshal(aux.Content, &act)
+			json.Unmarshal(argsData, &act)
+			act.Action = models.ActionTypeCmdRun
 			e.Content = act
 		case models.ActionTypeAgentFinish:
 			var act models.AgentFinishAction
-			json.Unmarshal(aux.Content, &act)
+			json.Unmarshal(argsData, &act)
+			act.Action = models.ActionTypeAgentFinish
 			e.Content = act
 		case models.ActionTypeMessage:
 			var act models.MessageAction
-			json.Unmarshal(aux.Content, &act)
+			json.Unmarshal(argsData, &act)
+			act.Action = models.ActionTypeMessage
 			e.Content = act
 		case models.ActionTypeDelegate:
 			var act models.AgentDelegateAction
-			json.Unmarshal(aux.Content, &act)
+			json.Unmarshal(argsData, &act)
+			act.Action = models.ActionTypeDelegate
 			e.Content = act
 		default:
-			// Try MessageAction as default if action is missing?
-			// Or just generic map
 			var m map[string]interface{}
-			json.Unmarshal(aux.Content, &m)
+			json.Unmarshal(argsData, &m)
+			m["action"] = actionName
 			e.Content = m
 		}
-	} else if e.Type == EventTypeObservation {
-		// Inspect "observation" field
-		var probe struct {
-			Observation string `json:"observation"`
-		}
-		if err := json.Unmarshal(aux.Content, &probe); err != nil {
-			var str string
-			if err := json.Unmarshal(aux.Content, &str); err == nil {
-				e.Content = str
-				return nil
-			}
-			e.Content = aux.Content
-			return nil
+	} else if obsName, ok := probe["observation"].(string); ok {
+		e.Type = EventTypeObservation
+		var extrasData []byte
+		if extrasMap, ok := probe["extras"]; ok {
+			extrasData, _ = json.Marshal(extrasMap)
+		} else {
+			extrasData = data
 		}
 
-		if probe.Observation == "run" || probe.Observation == "run_ipython" || probe.Observation == "delegate" {
+		contentStr, _ := probe["content"].(string)
+
+		switch obsName {
+		case "run", "run_ipython", "delegate":
 			var obs models.CmdOutputObservation
-			json.Unmarshal(aux.Content, &obs)
+			json.Unmarshal(extrasData, &obs)
+			obs.Observation = obsName
+			obs.Content = contentStr
 			e.Content = obs
-		} else if probe.Observation == "task_tracking" {
+		case "task_tracking":
 			var obs models.TaskTrackingObservation
-			json.Unmarshal(aux.Content, &obs)
+			json.Unmarshal(extrasData, &obs)
+			obs.Observation = obsName
+			obs.Content = contentStr
 			e.Content = obs
-		} else if probe.Observation == "loop_detection" {
+		case "loop_detection":
 			var obs models.LoopDetectionObservation
-			json.Unmarshal(aux.Content, &obs)
+			json.Unmarshal(extrasData, &obs)
+			obs.Observation = obsName
+			obs.Content = contentStr
 			e.Content = obs
-		} else {
+		default:
 			var m map[string]interface{}
-			json.Unmarshal(aux.Content, &m)
+			json.Unmarshal(extrasData, &m)
+			m["observation"] = obsName
+			m["content"] = contentStr
 			e.Content = m
 		}
 	} else {
-		// Generic content
-		var m interface{}
-		json.Unmarshal(aux.Content, &m)
-		e.Content = m
+		// Generic or unknown
+		e.Content = probe
 	}
+
 	return nil
 }
 

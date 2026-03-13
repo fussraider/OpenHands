@@ -20,9 +20,8 @@ func init() {
 			Runtime: "local",
 		},
 	}
-	f, _ := os.CreateTemp("", "conversations.json")
-	f.Close()
-	ConversationStore = store.NewConversationStore(f.Name())
+	store.InitDB("file::memory:?cache=shared")
+	ConversationStore = store.NewConversationStore()
 
 	f2, _ := os.CreateTemp("", "settings.json")
 	f2.Close()
@@ -227,7 +226,7 @@ func TestAddMessageHandler(t *testing.T) {
 	found := false
 	for _, ev := range eventsList {
 		if reqData, ok := ev.Content.(models.ActionRequest); ok {
-			if reqData.Action == "message" && reqData.Args == "Hello from test!" {
+			if reqData.Action == "message" && reqData.Args["content"] == "Hello from test!" {
 				found = true
 				break
 			}
@@ -239,9 +238,13 @@ func TestAddMessageHandler(t *testing.T) {
 }
 
 func TestConversationAdditionalEndpoints(t *testing.T) {
+	reqBody := models.InitSessionRequest{Repository: "test-repo"}
+	created, _ := ConversationStore.CreateConversation(reqBody)
+	id := created.ConversationID
+
 	// Microagents
-	req, _ := http.NewRequest("GET", "/api/conversations/123/microagents", nil)
-	req.SetPathValue("id", "123")
+	req, _ := http.NewRequest("GET", "/api/conversations/" + id + "/microagents", nil)
+	req.SetPathValue("id", id)
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(GetConversationMicroagentsHandler)
 	handler.ServeHTTP(rr, req)
@@ -250,8 +253,8 @@ func TestConversationAdditionalEndpoints(t *testing.T) {
 	}
 
 	// Remember Prompt
-	req, _ = http.NewRequest("GET", "/api/conversations/123/remember-prompt", nil)
-	req.SetPathValue("id", "123")
+	req, _ = http.NewRequest("GET", "/api/conversations/" + id + "/remember-prompt", nil)
+	req.SetPathValue("id", id)
 	rr = httptest.NewRecorder()
 	handler = http.HandlerFunc(GetRememberPromptHandler)
 	handler.ServeHTTP(rr, req)

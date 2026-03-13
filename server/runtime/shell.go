@@ -187,13 +187,17 @@ func (s *ShellSession) readUntilPrompt(ctx context.Context) (string, int, error)
 
 func (s *ShellSession) Execute(ctx context.Context, command string) (string, int, error) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
+	initialized := s.initialized
+	s.mu.Unlock()
 
-	if !s.initialized {
+	if !initialized {
 		if err := s.Initialize(ctx); err != nil {
 			return "", -1, err
 		}
 	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	// Write command
 	if _, err := s.rw.Write([]byte(command + "\n")); err != nil {
@@ -209,9 +213,7 @@ func (s *ShellSession) Execute(ctx context.Context, command string) (string, int
 	// Clean output
 	output := strings.TrimSpace(rawOutput)
 	trimmedCmd := strings.TrimSpace(command)
-	if strings.HasPrefix(output, trimmedCmd) {
-		output = strings.TrimPrefix(output, trimmedCmd)
-	}
+	output = strings.TrimPrefix(output, trimmedCmd)
 	output = ansiRegex.ReplaceAllString(output, "")
 	output = strings.TrimSpace(output)
 

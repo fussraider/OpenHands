@@ -13,6 +13,8 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
 )
 
@@ -36,17 +38,42 @@ func NewDockerRuntime(cfg *config.Config) (*DockerRuntime, error) {
 }
 
 func (r *DockerRuntime) ensureContainer(ctx context.Context) error {
-	imageName := "ubuntu:latest" // Default, should come from config
-	if r.config.Sandbox.Runtime != "" {
-		// If runtime config has image name
+	imageName := "ubuntu:latest" // Default
+	if r.config.Sandbox.ContainerImage != "" {
+		imageName = r.config.Sandbox.ContainerImage
 	}
 
 	if r.containerID == "" {
+		slog.Debug("Pulling Docker image (if needed)", "image", imageName)
+		reader, err := r.client.ImagePull(ctx, imageName, image.PullOptions{})
+		if err == nil {
+			io.Copy(io.Discard, reader)
+			reader.Close()
+		} else {
+			slog.Warn("Failed to pull image, will attempt to use local", "error", err)
+		}
+
+		workspaceDir := os.Getenv("WORKSPACE_BASE")
+		if workspaceDir == "" {
+			cwd, _ := os.Getwd()
+			workspaceDir = filepath.Join(cwd, "workspace")
+		}
+		os.MkdirAll(workspaceDir, 0755)
+
 		resp, err := r.client.ContainerCreate(ctx, &container.Config{
 			Image: imageName,
 			Cmd:   []string{"tail", "-f", "/dev/null"}, // Keep alive
 			Tty:   true,
-		}, nil, nil, nil, "")
+			WorkingDir: "/workspace",
+		}, &container.HostConfig{
+			Mounts: []mount.Mount{
+				{
+					Type:   mount.TypeBind,
+					Source: workspaceDir,
+					Target: "/workspace",
+				},
+			},
+		}, nil, nil, "")
 		if err != nil {
 			return err
 		}
@@ -271,6 +298,17 @@ func (r *DockerRuntime) Close() error {
 		}
 	} else if r.hijackedResp != nil {
 		r.hijackedResp.Close()
+	}
+
+	if r.containerID != "" {
+		// Remove the container
+		err := r.client.ContainerRemove(context.Background(), r.containerID, container.RemoveOptions{
+			RemoveVolumes: true,
+			Force:         true,
+		})
+		if err != nil && firstErr == nil {
+			firstErr = err
+		}
 	}
 	return firstErr
 }

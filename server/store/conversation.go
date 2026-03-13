@@ -1,76 +1,47 @@
 package store
 
 import (
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"openhands-go/server/models"
-	"os"
-	"sync"
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type ConversationStore struct {
-	mu            sync.RWMutex
-	conversations map[string]models.ConversationInfo
-	filePath      string
+	db *gorm.DB
 }
 
-func NewConversationStore(filePath string) *ConversationStore {
-	store := &ConversationStore{
-		conversations: make(map[string]models.ConversationInfo),
-		filePath:      filePath,
+func NewConversationStore() *ConversationStore {
+	return &ConversationStore{
+		db: DB,
 	}
-	store.load()
-	return store
-}
-
-func (s *ConversationStore) load() {
-	data, err := os.ReadFile(s.filePath)
-	if err != nil {
-		return
-	}
-	json.Unmarshal(data, &s.conversations)
-}
-
-func (s *ConversationStore) save() error {
-	data, err := json.MarshalIndent(s.conversations, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(s.filePath, data, 0644)
 }
 
 func (s *ConversationStore) ListConversations() []models.ConversationInfo {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	conversations := make([]models.ConversationInfo, 0, len(s.conversations))
-	for _, c := range s.conversations {
-		conversations = append(conversations, c)
-	}
+	var conversations []models.ConversationInfo
+	s.db.Find(&conversations)
 	return conversations
 }
 
 func (s *ConversationStore) GetConversation(id string) (models.ConversationInfo, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	c, ok := s.conversations[id]
-	if !ok {
-		return models.ConversationInfo{}, errors.New("conversation not found")
+	var c models.ConversationInfo
+	result := s.db.First(&c, "conversation_id = ?", id)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return c, errors.New("conversation not found")
+		}
+		return c, result.Error
 	}
 	return c, nil
 }
 
 func (s *ConversationStore) CreateConversation(req models.InitSessionRequest) (models.ConversationInfo, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	// Mimics logger.debug(f'closing_from_too_many_sessions...') from python standalone_conversation_manager.py
-	if len(s.conversations) >= 50 { // arbitrary max for MVP
+	var count int64
+	s.db.Model(&models.ConversationInfo{}).Count(&count)
+	if count >= 50 {
 		slog.Debug("closing_from_too_many_sessions", "warning", "max limit reached")
 	}
 
@@ -79,46 +50,57 @@ func (s *ConversationStore) CreateConversation(req models.InitSessionRequest) (m
 
 	conversation := models.ConversationInfo{
 		ConversationID:     id,
-		Title:              "New Conversation", // Default title logic to be implemented
+		Title:              "New Conversation",
 		CreatedAt:          now,
 		LastUpdatedAt:      now,
-		Status:             models.ConversationStatusStopped, // Initially stopped
+		Status:             models.ConversationStatusStopped,
 		SelectedRepository: req.Repository,
 		SelectedBranch:     req.SelectedBranch,
 		Trigger:            req.Trigger,
 	}
 
-	s.conversations[id] = conversation
-	if err := s.save(); err != nil {
-		return models.ConversationInfo{}, err
+	result := s.db.Create(&conversation)
+	if result.Error != nil {
+		return models.ConversationInfo{}, result.Error
 	}
 	return conversation, nil
 }
 
 func (s *ConversationStore) DeleteConversation(id string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if _, ok := s.conversations[id]; !ok {
+	result := s.db.Delete(&models.ConversationInfo{}, "conversation_id = ?", id)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
 		return errors.New("conversation not found")
 	}
-
-	delete(s.conversations, id)
-	return s.save()
+	return nil
 }
 
 func (s *ConversationStore) UpdateConversation(id string, title string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	c, ok := s.conversations[id]
-	if !ok {
+	result := s.db.Model(&models.ConversationInfo{}).Where("conversation_id = ?", id).Updates(models.ConversationInfo{
+		Title:         title,
+		LastUpdatedAt: time.Now(),
+	})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
 		return errors.New("conversation not found")
 	}
+	return nil
+}
 
-	c.Title = title
-	c.LastUpdatedAt = time.Now()
-	s.conversations[id] = c
-
-	return s.save()
+func (s *ConversationStore) SetConversationStatus(id string, status models.ConversationStatus) error {
+	result := s.db.Model(&models.ConversationInfo{}).Where("conversation_id = ?", id).Updates(map[string]interface{}{
+		"status":          status,
+		"last_updated_at": time.Now(),
+	})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("conversation not found")
+	}
+	return nil
 }

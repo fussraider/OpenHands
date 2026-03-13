@@ -5,7 +5,6 @@ import (
 	"openhands-go/server/events"
 	"openhands-go/server/models"
 	"testing"
-	"time"
 )
 
 // MockRuntimeManager for testing

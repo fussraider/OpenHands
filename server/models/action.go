@@ -10,6 +10,8 @@ const (
 	ActionTypeMessage     ActionType = "message"
 	ActionTypeThink       ActionType = "think"
 	ActionTypeDelegate    ActionType = "delegate"
+	ActionTypeFileEdit    ActionType = "edit"
+	ActionTypeFileRead    ActionType = "read"
 )
 
 // BaseAction contains common fields for all actions.
@@ -60,4 +62,32 @@ type AgentDelegateAction struct {
 	Inputs     map[string]interface{} `json:"inputs,omitempty"`
 	Thought    string                 `json:"thought,omitempty"`
 	ToolCallID string                 `json:"tool_call_id,omitempty"`
+}
+
+// FileEditAction represents editing a file.
+type FileEditAction struct {
+	Action      ActionType `json:"action"` // "edit"
+	Path        string     `json:"path"`
+	Command     string     `json:"command,omitempty"`
+	FileText    string     `json:"file_text,omitempty"`
+	ViewRange   []int      `json:"view_range,omitempty"`
+	OldStr      string     `json:"old_str,omitempty"`
+	NewStr      string     `json:"new_str,omitempty"`
+	InsertLine  *int       `json:"insert_line,omitempty"`
+	Content     string     `json:"content,omitempty"`
+	Start       *int       `json:"start,omitempty"`
+	End         *int       `json:"end,omitempty"`
+	Thought     string     `json:"thought,omitempty"`
+	ImplSource  string     `json:"impl_source,omitempty"`
+	ToolCallID  string     `json:"tool_call_id,omitempty"`
+}
+
+// FileReadAction represents reading a file.
+type FileReadAction struct {
+	Action     ActionType `json:"action"` // "read"
+	Path       string     `json:"path"`
+	Thought    string     `json:"thought,omitempty"`
+	ImplSource string     `json:"impl_source,omitempty"`
+	ViewRange  []int      `json:"view_range,omitempty"`
+	ToolCallID string     `json:"tool_call_id,omitempty"`
 }

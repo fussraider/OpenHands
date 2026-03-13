@@ -6,15 +6,13 @@ import (
 	"net/http/httptest"
 	"openhands-go/server/models"
 	"openhands-go/server/store"
-	"os"
 	"testing"
 )
 
 func TestGetMicroagentManagementConversationsHandler(t *testing.T) {
 	// Setup test conversation store
-	f, _ := os.CreateTemp("", "conversations_test.jsonl")
-	defer os.Remove(f.Name())
-	ConversationStore = store.NewConversationStore(f.Name())
+	store.InitDB("file::memory:?cache=shared")
+	ConversationStore = store.NewConversationStore()
 
 	// Create some conversations
 	ConversationStore.CreateConversation(models.InitSessionRequest{

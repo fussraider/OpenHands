@@ -53,7 +53,8 @@ type AgentConfig struct {
 }
 
 type SandboxConfig struct {
-	Runtime string `toml:"runtime"`
+	Runtime        string `toml:"runtime"`
+	ContainerImage string `toml:"container_image"`
 }
 
 type ServerConfig struct {
@@ -147,6 +148,9 @@ func LoadConfig() error {
 	}
 	if sandboxRuntime := os.Getenv("SANDBOX_RUNTIME"); sandboxRuntime != "" {
 		AppConfig.Sandbox.Runtime = sandboxRuntime
+	}
+	if containerImage := os.Getenv("SANDBOX_CONTAINER_IMAGE"); containerImage != "" {
+		AppConfig.Sandbox.ContainerImage = containerImage
 	}
 	if fileStorePath := os.Getenv("FILE_STORE_PATH"); fileStorePath != "" {
 		AppConfig.FileStorePath = fileStorePath

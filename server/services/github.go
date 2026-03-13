@@ -98,9 +98,38 @@ func (s *GithubService) GetInstallations(ctx context.Context, token string) ([]*
 }
 
 func (s *GithubService) GetSuggestedTasks(ctx context.Context, token string) ([]SuggestedTask, error) {
-	// MVP: return empty tasks or mock tasks.
-	// The Python version fetches user PRs and issues.
-	return []SuggestedTask{}, nil
+	client := s.getClient(ctx, token)
+	opts := &github.IssueListOptions{
+		State:       "open",
+		Filter:      "assigned",
+		ListOptions: github.ListOptions{PerPage: 15},
+	}
+	issues, _, err := client.Issues.List(ctx, true, opts)
+	if err != nil {
+		return nil, err
+	}
+	var tasks []SuggestedTask
+	for _, issue := range issues {
+		repoURL := issue.GetRepositoryURL()
+		// repoURL looks like https://api.github.com/repos/owner/repo
+		parts := strings.Split(repoURL, "/")
+		repo := ""
+		if len(parts) >= 2 {
+			repo = parts[len(parts)-2] + "/" + parts[len(parts)-1]
+		}
+		taskType := "OPEN_ISSUE"
+		if issue.IsPullRequest() {
+			taskType = "PULL_REQUEST"
+		}
+		tasks = append(tasks, SuggestedTask{
+			GitProvider: "github",
+			IssueNumber: issue.GetNumber(),
+			Repo:        repo,
+			Title:       issue.GetTitle(),
+			TaskType:    taskType,
+		})
+	}
+	return tasks, nil
 }
 
 func (s *GithubService) GetFileContent(ctx context.Context, token, owner, repo, path string) (string, error) {

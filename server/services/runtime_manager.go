@@ -42,6 +42,16 @@ func (rm *RuntimeManager) GetRuntime(conversationID string) (runtime.Runtime, er
 	return rt, nil
 }
 
+func (rm *RuntimeManager) GetActiveRuntimes() []string {
+	rm.mu.RLock()
+	defer rm.mu.RUnlock()
+	var ids []string
+	for id := range rm.runtimes {
+		ids = append(ids, id)
+	}
+	return ids
+}
+
 func (rm *RuntimeManager) CreateRuntime(ctx context.Context, conversationID string) (runtime.Runtime, error) {
 	rm.mu.Lock()
 	defer rm.mu.Unlock()

@@ -14,7 +14,7 @@ const (
 )
 
 type ConversationInfo struct {
-	ConversationID     string             `json:"conversation_id"`
+	ConversationID     string             `json:"conversation_id" gorm:"primaryKey;column:conversation_id"`
 	Title              string             `json:"title"`
 	LastUpdatedAt      time.Time          `json:"last_updated_at"`
 	CreatedAt          time.Time          `json:"created_at"`
@@ -41,5 +41,5 @@ type ConversationResponse struct {
 
 type ActionRequest struct {
 	Action string `json:"action"`
-	Args   string `json:"args"`
+	Args   map[string]interface{} `json:"args"`
 }

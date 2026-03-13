@@ -15,8 +15,16 @@ func InitSocketServer(onAction func(string, models.ActionRequest) error) error {
 	server := socketio.NewServer(nil)
 
 	server.OnConnect("/", func(s socketio.Conn) error {
-		s.SetContext("")
-		slog.Debug("WebSocket connected", "id", s.ID())
+		u := s.URL()
+		conversationID := u.Query().Get("conversation_id")
+		if conversationID != "" {
+			s.SetContext(conversationID)
+			s.Join("room:" + conversationID)
+			slog.Debug("WebSocket connected and joined room", "id", s.ID(), "conversation_id", conversationID)
+		} else {
+			s.SetContext("")
+			slog.Debug("WebSocket connected without conversation_id", "id", s.ID())
+		}
 
 		// Mimic python `Using client wait timeout...`
 		slog.Debug("Using client wait timeout: 30s for session", "sid", s.ID())

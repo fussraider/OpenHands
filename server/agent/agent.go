@@ -13,9 +13,10 @@ import (
 	"openhands-go/server/models"
 	"openhands-go/server/runtime"
 	"openhands-go/server/runtime/plugins"
-	"openhands-go/server/security"
 	"openhands-go/server/runtime/plugins/browser"
+	"openhands-go/server/runtime/plugins/editor"
 	"openhands-go/server/runtime/plugins/jupyter"
+	"openhands-go/server/security"
 	"time"
 
 	"github.com/google/uuid"
@@ -45,6 +46,7 @@ func NewAgent(id, conversationID string, llmService *llm.LLMService, rt runtime.
 	plugs := []plugins.Plugin{
 		jupyter.NewJupyterPlugin(),
 		browser.NewBrowserPlugin(),
+		editor.NewEditorPlugin(),
 	}
 
 	pm, err := prompts.New()
@@ -336,7 +338,13 @@ func (a *Agent) Step(ctx context.Context) error {
 						if err != nil {
 							output = fmt.Sprintf("Plugin error: %v", err)
 						}
-						a.recordObservation(tc.ID, output, "run_ipython")
+						obsType := "run_ipython"
+						if tc.FunctionCall.Name == "str_replace_editor" {
+							obsType = "edit"
+						} else if tc.FunctionCall.Name == "browser_action" {
+							obsType = "browse"
+						}
+						a.recordObservation(tc.ID, output, obsType)
 						break
 					}
 				}

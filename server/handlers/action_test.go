@@ -20,7 +20,7 @@ func TestExecuteActionHandler(t *testing.T) {
 
 	reqBody := models.ActionRequest{
 		Action: "run",
-		Args:   "echo 'hello world'",
+		Args:   map[string]interface{}{"command": "echo 'hello world'"},
 	}
 	body, _ := json.Marshal(reqBody)
 	req, err := http.NewRequest("POST", "/api/conversations/123/action", bytes.NewBuffer(body))

@@ -17,8 +17,11 @@ func TestEventStreamPersistence(t *testing.T) {
 
 	// 1. Create stream and add generic event
 	es1 := NewEventStream("conv1", filePath)
-	evt1 := Event{ID: uuid.New().String(), Type: EventTypeAction, Content: "test1", Timestamp: time.Now()}
+	evt1 := Event{ID: uuid.New().String(), Type: EventTypeAction, Content: map[string]interface{}{"action": "test1"}, Timestamp: time.Now()}
 	es1.AddEvent(evt1)
+
+	b1, _ := json.Marshal(evt1)
+	t.Logf("EVT1 JSON: %s", string(b1))
 
 	// 2. Verify file exists
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
@@ -32,6 +35,8 @@ func TestEventStreamPersistence(t *testing.T) {
 	}
 	evt2 := Event{ID: uuid.New().String(), Type: EventTypeAction, Content: cmdAction, Timestamp: time.Now()}
 	es1.AddEvent(evt2)
+	b2, _ := json.Marshal(evt2)
+	t.Logf("EVT2 JSON: %s", string(b2))
 
 	// 4. Create new stream with same path (simulate restart)
 	es2 := NewEventStream("conv1", filePath)
@@ -42,18 +47,14 @@ func TestEventStreamPersistence(t *testing.T) {
 		t.Fatalf("Expected 2 events, got %d", len(events))
 	}
 
-	// Check evt1 (string fallback)
-	if events[0].Content != "test1" {
+	// Check evt1 (fallback map)
+	if m, ok := events[0].Content.(map[string]interface{}); !ok || m["action"] != "test1" {
 		t.Errorf("Event 1 content mismatch: %v", events[0].Content)
 	}
 
 	// Check evt2 (Typed struct)
 	loadedCmd, ok := events[1].Content.(models.CmdRunAction)
 	if !ok {
-		// It might be a pointer depending on how Unmarshal works?
-		// UnmarshalJSON assigns value to e.Content.
-		// `var act models.CmdRunAction; json.Unmarshal(..., &act); e.Content = act`
-		// So it's a value.
 		t.Errorf("Event 2 content type mismatch: %T", events[1].Content)
 	} else {
 		if loadedCmd.Command != "ls" {
@@ -64,7 +65,7 @@ func TestEventStreamPersistence(t *testing.T) {
 
 func TestEventUnmarshalPolymorphism(t *testing.T) {
 	// Action
-	jsonStr := `{"id":"1", "type":"action", "content":{"action":"run", "command":"echo hi"}}`
+	jsonStr := `{"id":"1", "action":"run", "args":{"command":"echo hi"}}`
 	var e Event
 	if err := json.Unmarshal([]byte(jsonStr), &e); err != nil {
 		t.Fatal(err)
@@ -79,7 +80,7 @@ func TestEventUnmarshalPolymorphism(t *testing.T) {
 	}
 
 	// Observation
-	jsonStrObs := `{"id":"2", "type":"observation", "content":{"observation":"run", "content":"hi", "metadata":{"exit_code":0}}}`
+	jsonStrObs := `{"id":"2", "observation":"run", "content":"hi", "extras":{"metadata":{"exit_code":0}}}`
 	var e2 Event
 	if err := json.Unmarshal([]byte(jsonStrObs), &e2); err != nil {
 		t.Fatal(err)
@@ -94,7 +95,7 @@ func TestEventUnmarshalPolymorphism(t *testing.T) {
 	}
 
 	// Task Tracking Observation
-	jsonStrTask := `{"id":"3", "type":"observation", "content":{"observation":"task_tracking", "content":"Task updated", "task_list":[{"id":"1", "description":"task1", "state":"started"}]}}`
+	jsonStrTask := `{"id":"3", "observation":"task_tracking", "content":"Task updated", "extras":{"task_list":[{"id":"1", "description":"task1", "state":"started"}]}}`
 	var e3 Event
 	if err := json.Unmarshal([]byte(jsonStrTask), &e3); err != nil {
 		t.Fatal(err)
@@ -109,7 +110,7 @@ func TestEventUnmarshalPolymorphism(t *testing.T) {
 	}
 
 	// Loop Detection Observation
-	jsonStrLoop := `{"id":"4", "type":"observation", "content":{"observation":"loop_detection", "content":"Loop detected"}}`
+	jsonStrLoop := `{"id":"4", "observation":"loop_detection", "content":"Loop detected"}`
 	var e4 Event
 	if err := json.Unmarshal([]byte(jsonStrLoop), &e4); err != nil {
 		t.Fatal(err)

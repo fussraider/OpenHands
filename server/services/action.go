@@ -84,7 +84,13 @@ func (s *ActionService) ExecuteAction(ctx context.Context, conversationID string
 
 	// 3. Execute in Runtime
 	// Use persistent Execute
-	output, exitCode, err := rt.Execute(ctx, "bash", "-c", req.Args)
+	cmdStr := ""
+	if cmdInterface, ok := req.Args["command"]; ok {
+		if c, ok := cmdInterface.(string); ok {
+			cmdStr = c
+		}
+	}
+	output, exitCode, err := rt.Execute(ctx, "bash", "-c", cmdStr)
 	if err != nil {
 		return "", err
 	}
@@ -97,7 +103,7 @@ func (s *ActionService) ExecuteAction(ctx context.Context, conversationID string
 		Metadata: models.CmdOutputMetadata{
 			ExitCode: exitCode,
 		},
-		Command: req.Args,
+		Command: cmdStr,
 	}
 
 	es.AddEvent(events.Event{

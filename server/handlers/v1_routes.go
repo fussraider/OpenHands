@@ -38,15 +38,39 @@ func RegisterV1Routes(mux *http.ServeMux) {
 
 func V1SearchSandboxesHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	
+	items := []map[string]interface{}{}
+	if runtimeManager != nil {
+		active := runtimeManager.GetActiveRuntimes()
+		for _, id := range active {
+			items = append(items, map[string]interface{}{
+				"sandbox_id": id,
+				"owner_id": "local",
+				"status": "RUNNING",
+			})
+		}
+	}
+
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"items":        []interface{}{},
+		"items":        items,
 		"next_page_id": nil,
 	})
 }
 
 func V1BatchGetSandboxesHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode([]interface{}{})
+	items := []map[string]interface{}{}
+	if runtimeManager != nil {
+		active := runtimeManager.GetActiveRuntimes()
+		for _, id := range active {
+			items = append(items, map[string]interface{}{
+				"sandbox_id": id,
+				"owner_id": "local",
+				"status": "RUNNING",
+			})
+		}
+	}
+	json.NewEncoder(w).Encode(items)
 }
 
 func V1StartSandboxHandler(w http.ResponseWriter, r *http.Request) {
@@ -102,15 +126,23 @@ func V1SearchEventsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// This is a minimal bridge to the EventStream for v1 parity
-	// In Python this hits event_service.search_events which reads from SQLite/DB
-	// For local open-source we just use the in-memory or file-backed EventStream
-
 	w.Header().Set("Content-Type", "application/json")
 
-	// Mock empty page format expected by frontend
+	var items []interface{}
+	if ActionService != nil {
+		es := ActionService.GetEventStream(conversationID)
+		if es != nil {
+			for _, ev := range es.GetEvents() {
+				items = append(items, ev)
+			}
+		}
+	}
+	if items == nil {
+		items = []interface{}{}
+	}
+
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"items":        []interface{}{},
+		"items":        items,
 		"next_page_id": nil,
 	})
 }
@@ -123,7 +155,21 @@ func V1BatchGetEventsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode([]interface{}{})
+
+	var items []interface{}
+	if ActionService != nil {
+		es := ActionService.GetEventStream(conversationID)
+		if es != nil {
+			for _, ev := range es.GetEvents() {
+				items = append(items, ev)
+			}
+		}
+	}
+	if items == nil {
+		items = []interface{}{}
+	}
+
+	json.NewEncoder(w).Encode(items)
 }
 
 func V1CountEventsHandler(w http.ResponseWriter, r *http.Request) {
@@ -134,7 +180,15 @@ func V1CountEventsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(0)
+	count := 0
+	if ActionService != nil {
+		es := ActionService.GetEventStream(conversationID)
+		if es != nil {
+			count = len(es.GetEvents())
+		}
+	}
+
+	json.NewEncoder(w).Encode(count)
 }
 
 func GetWebClientConfigHandler(w http.ResponseWriter, r *http.Request) {
@@ -147,10 +201,10 @@ func GetWebClientConfigHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	posthogKey := os.Getenv("POSTHOG_CLIENT_KEY")
-	if posthogKey == "" {
-		// Use the same fallback default as openhands.server.config.server_config
-		posthogKey = "phc_3ESMmY9SgqEAGBB6sMGK5ayYHkeUuknH2vP6FmWH9RA"
-	}
+	//if posthogKey == "" {
+	//	// Use the same fallback default as openhands.server.config.server_config
+	//	posthogKey = "phc_3ESMmY9SgqEAGBB6sMGK5ayYHkeUuknH2vP6FmWH9RA"
+	//}
 
 	enableBilling := os.Getenv("ENABLE_BILLING") == "true"
 	hideLLMSettings := os.Getenv("HIDE_LLM_SETTINGS") == "true"

@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"openhands-go/server/config"
+	"openhands-go/server/llm"
 	"openhands-go/server/models"
 	"openhands-go/server/store"
+	"strings"
 )
 
 var ConversationStore *store.ConversationStore
@@ -105,10 +108,15 @@ func NewConversationHandler(w http.ResponseWriter, r *http.Request) {
 	// Initialize Runtime and Agent
 	// Use background context for runtime/agent lifecycle, as they outlive the request
 	ctx := context.Background()
+
+	// Update status to starting
+	ConversationStore.SetConversationStatus(conversation.ConversationID, models.ConversationStatusStarting)
+
 	_, err = RuntimeManager.CreateRuntime(ctx, conversation.ConversationID)
 	if err != nil {
 		// Log error but don't fail conversation creation?
 		// Or fail.
+		ConversationStore.SetConversationStatus(conversation.ConversationID, models.ConversationStatusError)
 		http.Error(w, "Failed to create runtime: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -118,9 +126,13 @@ func NewConversationHandler(w http.ResponseWriter, r *http.Request) {
 	es := ActionService.GetEventStream(conversation.ConversationID)
 	err = RuntimeManager.StartAgent(ctx, conversation.ConversationID, es)
 	if err != nil {
+		ConversationStore.SetConversationStatus(conversation.ConversationID, models.ConversationStatusError)
 		http.Error(w, "Failed to start agent: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	ConversationStore.SetConversationStatus(conversation.ConversationID, models.ConversationStatusRunning)
+	conversation.Status = models.ConversationStatusRunning
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(conversation)
@@ -144,7 +156,7 @@ func AddMessageHandler(w http.ResponseWriter, r *http.Request) {
 	if ActionService != nil {
 		actionReq := models.ActionRequest{
 			Action: "message",
-			Args:   req.Message,
+			Args:   map[string]interface{}{"content": req.Message},
 		}
 		// Context from request since this is just an append operation
 		_, err := ActionService.ExecuteAction(r.Context(), id, actionReq)
@@ -165,10 +177,35 @@ func GetConversationMicroagentsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// MVP: For now we return an empty array to satisfy the frontend schema.
-	// In the future this should fetch active microagents from the agent loop's memory.
+	conversation, err := ConversationStore.GetConversation(id)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	var microagents []interface{} = []interface{}{}
+
+	if conversation.SelectedRepository != "" {
+		token := getToken(r)
+		if token != "" {
+			parts := strings.Split(conversation.SelectedRepository, "/")
+			if len(parts) >= 2 {
+				owner := parts[0]
+				repo := parts[len(parts)-1]
+				agents, err := GitService.GetMicroagents(r.Context(), token, owner, repo)
+				if err == nil {
+					for _, a := range agents {
+						microagents = append(microagents, a)
+					}
+				} else {
+					slog.Error("Failed to fetch microagents", "error", err)
+				}
+			}
+		}
+	}
+
 	response := map[string]interface{}{
-		"microagents": []interface{}{},
+		"microagents": microagents,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -182,9 +219,67 @@ func GetRememberPromptHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var eventsJson string
+	if ActionService != nil {
+		es := ActionService.GetEventStream(id)
+		events := es.GetEvents()
+		if len(events) > 20 {
+			events = events[len(events)-20:]
+		}
+		bytes, _ := json.MarshalIndent(events, "", "  ")
+		eventsJson = string(bytes)
+	}
+
+	promptTemplate := `You are tasked with generating a prompt that will be used by another AI to update a special reference file. This file contains important information and learnings that are used to carry out certain tasks. The file can be extended over time to incorporate new knowledge and experiences.
+
+You have been provided with a subset of new events that may require updates to the special file. These events are:
+<events>
+%s
+</events>
+
+Your task is to analyze these events and determine what updates, if any, should be made to the special file. Then, you need to generate a prompt that will instruct another AI to make these updates correctly and efficiently.
+
+When creating your prompt, follow these guidelines:
+1. Clearly specify which parts of the file need to be updated or if new sections should be added.
+2. Provide context for why these updates are necessary based on the new events.
+3. Be specific about the information that should be added or modified.
+4. Maintain the existing structure and formatting of the file.
+5. Ensure that the updates are consistent with the current content and don't contradict existing information.
+
+Now, based on the new events provided, generate a prompt that will guide the AI in making the appropriate updates to the special file. Your prompt should be clear, specific, and actionable. Include your prompt within <update_prompt> tags.
+`
+	sysPrompt := fmt.Sprintf(promptTemplate, eventsJson)
+
+	llmService, err := llm.NewLLMService(config.AppConfig.LLM)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status": "error",
+			"prompt": "",
+		})
+		return
+	}
+
+	reqMsgs := []llm.Message{
+		{Role: "system", Content: sysPrompt},
+		{Role: "user", Content: "Please generate a prompt for the AI to update the special file based on the events provided."},
+	}
+
+	respContent, err := llmService.Complete(r.Context(), reqMsgs)
+	prompt := ""
+	if err == nil && respContent != "" {
+		start := strings.Index(respContent, "<update_prompt>")
+		end := strings.Index(respContent, "</update_prompt>")
+		if start != -1 && end != -1 && end > start {
+			prompt = strings.TrimSpace(respContent[start+len("<update_prompt>"):end])
+		} else {
+			prompt = strings.TrimSpace(respContent)
+		}
+	}
+
 	response := map[string]interface{}{
 		"status": "success",
-		"prompt": "", // Dummy MVP prompt
+		"prompt": prompt,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -237,11 +332,15 @@ func StartConversationHandler(w http.ResponseWriter, r *http.Request) {
 
 	ctx := context.Background()
 
+	// Update status to starting
+	ConversationStore.SetConversationStatus(id, models.ConversationStatusStarting)
+
 	// Ensure runtime is created if not exists
 	_, err = RuntimeManager.GetRuntime(id)
 	if err != nil {
 		_, err = RuntimeManager.CreateRuntime(ctx, id)
 		if err != nil {
+			ConversationStore.SetConversationStatus(id, models.ConversationStatusError)
 			http.Error(w, "Failed to create runtime: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -251,9 +350,13 @@ func StartConversationHandler(w http.ResponseWriter, r *http.Request) {
 	es := ActionService.GetEventStream(id)
 	err = RuntimeManager.StartAgent(ctx, id, es)
 	if err != nil {
+		ConversationStore.SetConversationStatus(id, models.ConversationStatusError)
 		http.Error(w, "Failed to start agent: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	ConversationStore.SetConversationStatus(id, models.ConversationStatusRunning)
+	conversation.Status = models.ConversationStatusRunning
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(conversation)
@@ -279,6 +382,9 @@ func StopConversationHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+
+	ConversationStore.SetConversationStatus(id, models.ConversationStatusStopped)
+	conversation.Status = models.ConversationStatusStopped
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(conversation)

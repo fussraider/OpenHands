@@ -32,7 +32,7 @@ func TestActionService_ExecuteAction_Message(t *testing.T) {
 	// Test Message Action
 	req := models.ActionRequest{
 		Action: "message",
-		Args:   "Hello World",
+		Args:   map[string]interface{}{"content": "Hello World"},
 	}
 
 	_, err := service.ExecuteAction(context.Background(), conversationID, req)
@@ -54,8 +54,8 @@ func TestActionService_ExecuteAction_Message(t *testing.T) {
 		if !ok {
 			t.Errorf("Expected content to be ActionRequest, got %T", evts[0].Content)
 		} else {
-			if content.Args != "Hello World" {
-				t.Errorf("Expected args 'Hello World', got '%s'", content.Args)
+			if content.Args["content"] != "Hello World" {
+				t.Errorf("Expected args 'Hello World', got '%s'", content.Args["content"])
 			}
 		}
 	}
