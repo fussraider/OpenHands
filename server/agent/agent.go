@@ -184,7 +184,15 @@ func NewAgent(id, conversationID string, llmService *llm.LLMService, rt runtime.
 	return agent
 }
 
-func (a *Agent) Step(ctx context.Context) error {
+type StepResult int
+
+const (
+	StepResultContinue      StepResult = iota // Agent should continue stepping
+	StepResultAwaitUserInput                  // Agent should wait for user message
+	StepResultFinished                        // Agent finished the task
+)
+
+func (a *Agent) Step(ctx context.Context) (StepResult, error) {
 	// Start Span
 	ctx, span := otel.Tracer("agent").Start(ctx, "Agent.Step")
 	defer span.End()
@@ -222,7 +230,7 @@ func (a *Agent) Step(ctx context.Context) error {
 			Source: "runtime",
 		})
 		// We add the observation and return, effectively giving the agent a chance to react in the next step
-		return nil
+		return StepResultContinue, nil
 	}
 
 	messages := a.eventsToMessages(ctx, history)
@@ -232,7 +240,7 @@ func (a *Agent) Step(ctx context.Context) error {
 	resp, err := a.LLM.CompleteWithTools(llmSpanCtx, messages, a.Tools)
 	llmSpan.End()
 	if err != nil {
-		return fmt.Errorf("LLM completion error: %w", err)
+		return StepResultContinue, fmt.Errorf("LLM completion error: %w", err)
 	}
 	slog.Debug("Response from LLM", "content", resp.Content)
 
@@ -292,6 +300,7 @@ func (a *Agent) Step(ctx context.Context) error {
 					},
 					Source: "agent",
 				})
+				return StepResultFinished, nil
 
 			case "delegate":
 				handled = true
@@ -354,7 +363,10 @@ func (a *Agent) Step(ctx context.Context) error {
 				a.recordObservation(tc.ID, fmt.Sprintf("Unknown tool: %s", tc.FunctionCall.Name), "error")
 			}
 		}
+		return StepResultContinue, nil
 	} else if resp.Content != "" {
+		// Text-only response (no tool calls) — agent has something to say,
+		// then should wait for user input (like Python backend does).
 		a.EventStream.AddEvent(events.Event{
 			ID:   uuid.New().String(),
 			Type: events.EventTypeAction,
@@ -364,9 +376,10 @@ func (a *Agent) Step(ctx context.Context) error {
 			},
 			Source: "agent",
 		})
+		return StepResultAwaitUserInput, nil
 	}
 
-	return nil
+	return StepResultContinue, nil
 }
 
 func (a *Agent) recordAction(content interface{}) {
@@ -530,23 +543,78 @@ func (a *Agent) eventsToMessages(ctx context.Context, evts []events.Event) []llm
 	return msgs
 }
 
+// emitStateUpdate sends a ConversationStateUpdateEvent over the EventStream
+// so that V1 WebSocket clients receive execution status changes.
+func (a *Agent) emitStateUpdate(status string) {
+	a.EventStream.AddEvent(events.Event{
+		ID:     uuid.New().String(),
+		Type:   events.EventTypeObservation, // Using observation type for state events
+		Source: "environment",
+		Content: map[string]interface{}{
+			"kind":  "ConversationStateUpdateEvent",
+			"key":   "execution_status",
+			"value": status,
+		},
+	})
+}
+
 func (a *Agent) RunLoop(ctx context.Context) {
 	slog.Info("Starting CodeAct agent loop", "conversation_id", a.ConversationID)
 	if err := a.InitPlugins(ctx); err != nil {
 		slog.Error("Failed to init plugins", "error", err)
 	}
 
+	// Emit initial "running" status
+	a.emitStateUpdate("running")
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		default:
-			err := a.Step(ctx)
+			result, err := a.Step(ctx)
 			if err != nil {
 				slog.Error("Agent step error", "error", err)
+				a.emitStateUpdate("error")
 				time.Sleep(5 * time.Second) // Backoff
+				a.emitStateUpdate("running")
+				continue
 			}
-			time.Sleep(1 * time.Second) // Pace
+
+			switch result {
+			case StepResultFinished:
+				slog.Info("Agent finished", "conversation_id", a.ConversationID)
+				a.emitStateUpdate("finished")
+				return
+
+			case StepResultAwaitUserInput:
+				slog.Info("Agent awaiting user input", "conversation_id", a.ConversationID)
+				a.emitStateUpdate("idle")
+
+				// Wait for a new user message before resuming
+				userMsgCh := make(chan struct{}, 1)
+				unsubscribe := a.EventStream.Subscribe(func(event events.Event) {
+					if event.Source == "user" && event.Type == events.EventTypeAction {
+						select {
+						case userMsgCh <- struct{}{}:
+						default:
+						}
+					}
+				})
+
+				select {
+				case <-ctx.Done():
+					unsubscribe()
+					return
+				case <-userMsgCh:
+					unsubscribe()
+					slog.Info("User message received, resuming agent", "conversation_id", a.ConversationID)
+					a.emitStateUpdate("running")
+				}
+
+			case StepResultContinue:
+				time.Sleep(1 * time.Second) // Pace
+			}
 		}
 	}
 }
@@ -579,26 +647,23 @@ func (a *Agent) RunUntilDone(ctx context.Context) (map[string]string, error) {
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		default:
-			// Peek for FinishAction before stepping?
-			// Actually Step handles adding events. We need to check if the LAST event was finish.
-			// But Step returns error, not event.
-
-			// Check if finished
-			evts := a.EventStream.GetEvents()
-			if len(evts) > 0 {
-				lastEvent := evts[len(evts)-1]
-				if lastEvent.Type == events.EventTypeAction {
-					if finishAct, ok := lastEvent.Content.(models.AgentFinishAction); ok {
-						return finishAct.Outputs, nil
-					}
-				}
-			}
-
-			err := a.Step(ctx)
+			result, err := a.Step(ctx)
 			if err != nil {
 				return nil, err
 			}
-			time.Sleep(100 * time.Millisecond) // Faster pace for sub-tasks?
+
+			if result == StepResultFinished {
+				// Check for AgentFinishAction outputs
+				evts := a.EventStream.GetEvents()
+				for i := len(evts) - 1; i >= 0; i-- {
+					if finishAct, ok := evts[i].Content.(models.AgentFinishAction); ok {
+						return finishAct.Outputs, nil
+					}
+				}
+				return nil, nil
+			}
+
+			time.Sleep(100 * time.Millisecond) // Faster pace for sub-tasks
 		}
 	}
 }

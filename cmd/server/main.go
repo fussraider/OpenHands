@@ -2,16 +2,21 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"openhands-go/server/config"
+	"openhands-go/server/events"
 	"openhands-go/server/handlers"
 	"openhands-go/server/logger"
 	"openhands-go/server/middleware"
+	"openhands-go/server/models"
 	"openhands-go/server/observability"
 	"openhands-go/server/services"
 	"openhands-go/server/ws"
+
+	"github.com/google/uuid"
 )
 
 func main() {
@@ -31,15 +36,53 @@ func main() {
 
 	handlers.InitHandlers()
 
-	if err := ws.InitSocketServer(handlers.ProcessSocketAction); err != nil {
-		slog.Error("Failed to init socket server", "error", err)
-		panic(err)
-	}
-
 	mux := http.NewServeMux()
 
-	// Socket.IO
-	mux.Handle("/socket.io/", ws.Server)
+	// V1 WebSocket: /sockets/events/{id}
+	mux.HandleFunc("/sockets/events/{id}", ws.V1WebSocketHandler(
+		func(conversationID string) *events.EventStream {
+			if handlers.ActionService != nil {
+				return handlers.ActionService.GetEventStream(conversationID)
+			}
+			return nil
+		},
+		func(conversationID string, message json.RawMessage) {
+			// Parse V1 SendMessageRequest and convert to action
+			var msg struct {
+				Role    string `json:"role"`
+				Content []struct {
+					Type string `json:"type"`
+					Text string `json:"text"`
+				} `json:"content"`
+			}
+			if err := json.Unmarshal(message, &msg); err != nil {
+				slog.Error("Failed to parse V1 message", "error", err)
+				return
+			}
+
+			// Extract text content
+			var textContent string
+			for _, c := range msg.Content {
+				if c.Type == "text" {
+					textContent = c.Text
+					break
+				}
+			}
+
+			if textContent != "" && handlers.ActionService != nil {
+				es := handlers.ActionService.GetEventStream(conversationID)
+				es.AddEvent(events.Event{
+					ID:     uuid.New().String(),
+					Type:   events.EventTypeAction,
+					Content: models.ActionRequest{
+						Action: "message",
+						Args:   map[string]interface{}{"content": textContent},
+					},
+					Source: "user",
+				})
+			}
+		},
+	))
 
 	// API routes
 	mux.HandleFunc("GET /api/options/models", handlers.ModelsHandler)
@@ -69,6 +112,7 @@ func main() {
 	mux.HandleFunc("GET /api/conversations/{id}/config", handlers.GetConversationConfigHandler)
 	mux.HandleFunc("GET /api/conversations/{id}/events", handlers.GetConversationEventsHandler)
 	mux.HandleFunc("POST /api/conversations/{id}/events", handlers.GetConversationEventsHandler)
+	mux.HandleFunc("GET /api/conversations/{id}/events/count", handlers.GetConversationEventsCountHandler)
 	mux.HandleFunc("POST /api/conversations/{id}/exp-config", handlers.ExpConfigHandler)
 	mux.HandleFunc("GET /api/config", handlers.GetSettingsHandler) // Backwards compatible global config
 

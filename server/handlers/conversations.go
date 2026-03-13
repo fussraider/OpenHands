@@ -29,6 +29,20 @@ func populateRuntimeStatus(c *models.ConversationInfo) {
 	}
 }
 
+// populateV1Fields sets the V1-specific fields that the frontend needs
+// to establish a raw WebSocket connection.
+func populateV1Fields(c *models.ConversationInfo) {
+	c.ConversationVersion = "V1"
+	if c.URL == "" {
+		host := config.AppConfig.Server.Host
+		port := config.AppConfig.Server.Port
+		if host == "0.0.0.0" || host == "" {
+			host = "localhost"
+		}
+		c.URL = fmt.Sprintf("http://%s:%d/api/conversations/%s", host, port, c.ConversationID)
+	}
+}
+
 func SearchConversationsHandler(w http.ResponseWriter, r *http.Request) {
 	conversations := ConversationStore.ListConversations()
 	if conversations == nil {
@@ -37,6 +51,7 @@ func SearchConversationsHandler(w http.ResponseWriter, r *http.Request) {
 
 	for i := range conversations {
 		populateRuntimeStatus(&conversations[i])
+		populateV1Fields(&conversations[i])
 	}
 
 	response := map[string]interface{}{
@@ -99,6 +114,24 @@ func GetConversationEventsHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode([]interface{}{})
 }
 
+func GetConversationEventsCountHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "conversation id required", http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	count := 0
+	if ActionService != nil {
+		es := ActionService.GetEventStream(id)
+		if es != nil {
+			count = len(es.GetEvents())
+		}
+	}
+	json.NewEncoder(w).Encode(count)
+}
+
 func ExpConfigHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
@@ -151,6 +184,8 @@ func NewConversationHandler(w http.ResponseWriter, r *http.Request) {
 
 	ConversationStore.SetConversationStatus(conversation.ConversationID, models.ConversationStatusRunning)
 	conversation.Status = models.ConversationStatusRunning
+	populateRuntimeStatus(&conversation)
+	populateV1Fields(&conversation)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(conversation)
@@ -376,6 +411,7 @@ func StartConversationHandler(w http.ResponseWriter, r *http.Request) {
 	ConversationStore.SetConversationStatus(id, models.ConversationStatusRunning)
 	conversation.Status = models.ConversationStatusRunning
 	populateRuntimeStatus(&conversation)
+	populateV1Fields(&conversation)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(conversation)
@@ -405,6 +441,7 @@ func StopConversationHandler(w http.ResponseWriter, r *http.Request) {
 	ConversationStore.SetConversationStatus(id, models.ConversationStatusStopped)
 	conversation.Status = models.ConversationStatusStopped
 	populateRuntimeStatus(&conversation)
+	populateV1Fields(&conversation)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(conversation)
@@ -480,6 +517,7 @@ func GetConversationHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	populateRuntimeStatus(&conversation)
+	populateV1Fields(&conversation)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(conversation)

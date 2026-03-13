@@ -4,7 +4,6 @@ import (
 	"openhands-go/server/config"
 	"openhands-go/server/services"
 	"openhands-go/server/store"
-	"openhands-go/server/ws"
 	"path/filepath"
 )
 
@@ -34,6 +33,7 @@ func InitHandlers() {
 	}
 
 	RuntimeManager = services.NewRuntimeManager()
-	ActionService = services.NewActionService(ConversationStore, RuntimeManager, ws.BroadcastEvent)
+	// No broadcaster needed — V1 WebSocket clients subscribe to EventStream directly
+	ActionService = services.NewActionService(ConversationStore, RuntimeManager, nil)
 	GitService = services.NewGitService(config.AppConfig)
 }

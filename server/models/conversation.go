@@ -14,17 +14,18 @@ const (
 )
 
 type ConversationInfo struct {
-	ConversationID     string             `json:"conversation_id" gorm:"primaryKey;column:conversation_id"`
-	Title              string             `json:"title"`
-	LastUpdatedAt      time.Time          `json:"last_updated_at"`
-	CreatedAt          time.Time          `json:"created_at"`
-	Status             ConversationStatus `json:"status"`
-	SelectedRepository string             `json:"selected_repository,omitempty"`
-	SelectedBranch     string             `json:"selected_branch,omitempty"`
-	Trigger            string             `json:"trigger,omitempty"`
-	RuntimeStatus      string             `json:"runtime_status,omitempty"`
-	URL                string             `json:"url,omitempty"`
-	SessionAPIKey      string             `json:"session_api_key,omitempty"`
+	ConversationID      string             `json:"conversation_id" gorm:"primaryKey;column:conversation_id"`
+	Title               string             `json:"title"`
+	LastUpdatedAt       time.Time          `json:"last_updated_at"`
+	CreatedAt           time.Time          `json:"created_at"`
+	Status              ConversationStatus `json:"status"`
+	SelectedRepository  string             `json:"selected_repository,omitempty"`
+	SelectedBranch      string             `json:"selected_branch,omitempty"`
+	Trigger             string             `json:"trigger,omitempty"`
+	RuntimeStatus       string             `json:"runtime_status,omitempty"`
+	URL                 string             `json:"url,omitempty"`
+	SessionAPIKey       string             `json:"session_api_key,omitempty"`
+	ConversationVersion string             `json:"conversation_version" gorm:"-"`
 }
 
 type InitSessionRequest struct {

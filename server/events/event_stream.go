@@ -172,7 +172,8 @@ type EventStream struct {
 	events         []Event
 	conversationID string
 	filePath       string
-	subscribers    []func(Event)
+	subscribers    map[int]func(Event)
+	nextSubID      int
 }
 
 func NewEventStream(conversationID, filePath string) *EventStream {
@@ -180,7 +181,7 @@ func NewEventStream(conversationID, filePath string) *EventStream {
 		events:         make([]Event, 0),
 		conversationID: conversationID,
 		filePath:       filePath,
-		subscribers:    make([]func(Event), 0),
+		subscribers:    make(map[int]func(Event)),
 	}
 	es.loadEvents()
 	return es
@@ -236,22 +237,25 @@ func (es *EventStream) appendEventToFile(event Event) {
 	}
 }
 
-func (es *EventStream) Subscribe(callback func(Event)) {
+// Subscribe registers a callback for new events and returns an unsubscribe function.
+func (es *EventStream) Subscribe(callback func(Event)) func() {
 	es.mu.Lock()
-	defer es.mu.Unlock()
-	es.subscribers = append(es.subscribers, callback)
+	id := es.nextSubID
+	es.nextSubID++
+	es.subscribers[id] = callback
+	es.mu.Unlock()
+
+	return func() {
+		es.mu.Lock()
+		defer es.mu.Unlock()
+		delete(es.subscribers, id)
+	}
 }
 
 func (es *EventStream) AddEvent(event Event) {
 	es.mu.Lock()
 	defer es.mu.Unlock()
 	event.Timestamp = time.Now()
-
-	// If Content is not already one of our types (e.g. map passed in),
-	// we assume the caller passed correct struct OR we just store it.
-	// But persistence uses JSON Marshal. When loading back, UnmarshalJSON will type it.
-	// So in-memory, it might be untyped initially if added as map.
-	// Ideally callers should add structs.
 
 	es.events = append(es.events, event)
 	es.appendEventToFile(event)

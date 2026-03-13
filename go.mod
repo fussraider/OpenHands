@@ -8,6 +8,7 @@ require (
 	github.com/google/go-github/v60 v60.0.0
 	github.com/google/uuid v1.6.0
 	github.com/googollee/go-socket.io v1.7.0
+	github.com/gorilla/websocket v1.4.2
 	github.com/joho/godotenv v1.5.1
 	github.com/mark3labs/mcp-go v0.44.1
 	github.com/pelletier/go-toml/v2 v2.2.4
@@ -43,7 +44,6 @@ require (
 	github.com/gofrs/uuid v4.0.0+incompatible // indirect
 	github.com/gomodule/redigo v1.8.4 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
-	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.7 // indirect
 	github.com/invopop/jsonschema v0.13.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
