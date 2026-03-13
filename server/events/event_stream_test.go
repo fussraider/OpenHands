@@ -124,3 +124,43 @@ func TestEventUnmarshalPolymorphism(t *testing.T) {
 		t.Errorf("Loop content mismatch")
 	}
 }
+
+func TestObservationStructuredEventMarshal(t *testing.T) {
+	evt := Event{
+		ID:     "event-1",
+		Type:   EventTypeObservation,
+		Source: "environment",
+		Content: map[string]interface{}{
+			"kind":  "ConversationStateUpdateEvent",
+			"key":   "execution_status",
+			"value": "running",
+		},
+		Timestamp: time.Unix(1700000000, 0),
+	}
+
+	data, err := json.Marshal(evt)
+	if err != nil {
+		t.Fatalf("marshal failed: %v", err)
+	}
+
+	var raw map[string]interface{}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		t.Fatalf("unmarshal failed: %v", err)
+	}
+
+	if got, ok := raw["kind"].(string); !ok || got != "ConversationStateUpdateEvent" {
+		t.Fatalf("kind mismatch: %v", raw["kind"])
+	}
+
+	if got, ok := raw["key"].(string); !ok || got != "execution_status" {
+		t.Fatalf("key mismatch: %v", raw["key"])
+	}
+
+	if got, ok := raw["value"].(string); !ok || got != "running" {
+		t.Fatalf("value mismatch: %v", raw["value"])
+	}
+
+	if _, ok := raw["observation"]; ok {
+		t.Fatalf("unexpected observation field for structured state update event")
+	}
+}

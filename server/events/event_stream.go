@@ -48,6 +48,15 @@ func (e Event) MarshalJSON() ([]byte, error) {
 			}
 			out["args"] = contentMap
 		} else if e.Type == EventTypeObservation {
+			if _, isStructuredEvent := contentMap["kind"]; isStructuredEvent {
+				// State/update events from the environment (e.g. ConversationStateUpdateEvent)
+				// are already shaped for the V1 client and must be sent as-is.
+				for k, v := range contentMap {
+					out[k] = v
+				}
+				return json.Marshal(out)
+			}
+
 			// Extract "observation", "content", put rest in "extras"
 			if obsVal, ok := contentMap["observation"]; ok {
 				out["observation"] = obsVal
