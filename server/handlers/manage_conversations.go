@@ -30,6 +30,7 @@ func GetMicroagentManagementConversationsHandler(w http.ResponseWriter, r *http.
 		if selectedRepository != "" && conv.SelectedRepository != selectedRepository {
 			continue
 		}
+		populateRuntimeStatus(&conv)
 
 		filtered = append(filtered, conv)
 	}

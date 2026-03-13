@@ -15,10 +15,28 @@ import (
 
 var ConversationStore *store.ConversationStore
 
+func populateRuntimeStatus(c *models.ConversationInfo) {
+	if c.Status == models.ConversationStatusRunning {
+		c.RuntimeStatus = "STATUS$RUNTIME_STARTED"
+	} else if c.Status == models.ConversationStatusStopped {
+		c.RuntimeStatus = "STATUS$STOPPED"
+	} else if c.Status == models.ConversationStatusStarting {
+		c.RuntimeStatus = "STATUS$STARTING_RUNTIME"
+	} else if c.Status == models.ConversationStatusError {
+		c.RuntimeStatus = "STATUS$ERROR"
+	} else {
+		c.RuntimeStatus = "STATUS$STOPPED"
+	}
+}
+
 func SearchConversationsHandler(w http.ResponseWriter, r *http.Request) {
 	conversations := ConversationStore.ListConversations()
 	if conversations == nil {
 		conversations = []models.ConversationInfo{} // Ensure we return [] instead of null
+	}
+
+	for i := range conversations {
+		populateRuntimeStatus(&conversations[i])
 	}
 
 	response := map[string]interface{}{
@@ -357,6 +375,7 @@ func StartConversationHandler(w http.ResponseWriter, r *http.Request) {
 
 	ConversationStore.SetConversationStatus(id, models.ConversationStatusRunning)
 	conversation.Status = models.ConversationStatusRunning
+	populateRuntimeStatus(&conversation)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(conversation)
@@ -385,6 +404,7 @@ func StopConversationHandler(w http.ResponseWriter, r *http.Request) {
 
 	ConversationStore.SetConversationStatus(id, models.ConversationStatusStopped)
 	conversation.Status = models.ConversationStatusStopped
+	populateRuntimeStatus(&conversation)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(conversation)
@@ -458,6 +478,8 @@ func GetConversationHandler(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+
+	populateRuntimeStatus(&conversation)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(conversation)
