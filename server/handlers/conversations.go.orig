@@ -35,10 +35,6 @@ func SearchConversationsHandler(w http.ResponseWriter, r *http.Request) {
 		conversations = []models.ConversationInfo{} // Ensure we return [] instead of null
 	}
 
-	for i := range conversations {
-		populateRuntimeStatus(&conversations[i])
-	}
-
 	response := map[string]interface{}{
 		"results":      conversations,
 		"next_page_id": nil,

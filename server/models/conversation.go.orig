@@ -22,9 +22,6 @@ type ConversationInfo struct {
 	SelectedRepository string             `json:"selected_repository,omitempty"`
 	SelectedBranch     string             `json:"selected_branch,omitempty"`
 	Trigger            string             `json:"trigger,omitempty"`
-	RuntimeStatus      string             `json:"runtime_status,omitempty"`
-	URL                string             `json:"url,omitempty"`
-	SessionAPIKey      string             `json:"session_api_key,omitempty"`
 }
 
 type InitSessionRequest struct {
