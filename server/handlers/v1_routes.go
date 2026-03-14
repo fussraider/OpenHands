@@ -38,15 +38,15 @@ func RegisterV1Routes(mux *http.ServeMux) {
 
 func V1SearchSandboxesHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	
+
 	items := []map[string]interface{}{}
 	if runtimeManager != nil {
 		active := runtimeManager.GetActiveRuntimes()
 		for _, id := range active {
 			items = append(items, map[string]interface{}{
 				"sandbox_id": id,
-				"owner_id": "local",
-				"status": "RUNNING",
+				"owner_id":   "local",
+				"status":     "RUNNING",
 			})
 		}
 	}
@@ -65,8 +65,8 @@ func V1BatchGetSandboxesHandler(w http.ResponseWriter, r *http.Request) {
 		for _, id := range active {
 			items = append(items, map[string]interface{}{
 				"sandbox_id": id,
-				"owner_id": "local",
-				"status": "RUNNING",
+				"owner_id":   "local",
+				"status":     "RUNNING",
 			})
 		}
 	}

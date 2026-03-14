@@ -79,3 +79,13 @@ func (s *GitService) GetSuggestedTasks(ctx context.Context, token string) ([]Sug
 	}
 	return p.GetSuggestedTasks(ctx, token)
 }
+
+func (s *GitService) CreatePR(ctx context.Context, token string, repoName, sourceBranch, targetBranch, title, description string, draft bool, labels []string) (string, error) {
+	p, _ := s.GetProvider(ctx, token)
+	return p.CreatePR(ctx, token, repoName, sourceBranch, targetBranch, title, description, draft, labels)
+}
+
+func (s *GitService) CreateMR(ctx context.Context, token string, id interface{}, sourceBranch, targetBranch, title, description string, labels []string) (string, error) {
+	p, _ := s.GetProvider(ctx, token)
+	return p.CreateMR(ctx, token, id, sourceBranch, targetBranch, title, description, labels)
+}

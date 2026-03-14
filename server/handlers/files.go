@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -206,4 +207,60 @@ func SelectFileHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"code": string(content)})
+}
+
+// GitChangesHandler gets git changes in the workspace
+func GitChangesHandler(w http.ResponseWriter, r *http.Request) {
+	// For MVP, run `git status --porcelain` in workspaceDir
+	cmd := exec.Command("git", "status", "--porcelain")
+	cmd.Dir = workspaceDir
+	out, err := cmd.Output()
+	if err != nil {
+		http.Error(w, "Not a git repository or error getting changes: "+err.Error(), http.StatusNotFound)
+		return
+	}
+
+	lines := strings.Split(string(out), "\n")
+	var changes []map[string]string
+
+	for _, line := range lines {
+		if len(line) < 4 {
+			continue
+		}
+		status := line[:2]
+		file := strings.TrimSpace(line[3:])
+		changes = append(changes, map[string]string{
+			"file":   file,
+			"status": status,
+		})
+	}
+
+	if changes == nil {
+		changes = make([]map[string]string, 0)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(changes)
+}
+
+// GitDiffHandler gets git diff for a specific file
+func GitDiffHandler(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Query().Get("path")
+	if path == "" {
+		http.Error(w, "path parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	cmd := exec.Command("git", "diff", path)
+	cmd.Dir = workspaceDir
+	out, err := cmd.Output()
+	if err != nil {
+		http.Error(w, "Error getting diff: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"diff": string(out),
+	})
 }

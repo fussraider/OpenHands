@@ -187,9 +187,9 @@ func NewAgent(id, conversationID string, llmService *llm.LLMService, rt runtime.
 type StepResult int
 
 const (
-	StepResultContinue      StepResult = iota // Agent should continue stepping
-	StepResultAwaitUserInput                  // Agent should wait for user message
-	StepResultFinished                        // Agent finished the task
+	StepResultContinue       StepResult = iota // Agent should continue stepping
+	StepResultAwaitUserInput                   // Agent should wait for user message
+	StepResultFinished                         // Agent finished the task
 )
 
 func (a *Agent) Step(ctx context.Context) (StepResult, error) {

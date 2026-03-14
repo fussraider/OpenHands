@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 )
 
+var SecretsStore *store.SecretsStore
+
 func InitHandlers() {
 	settingsPath := "settings.json"
 	dbPath := "openhands.db"
@@ -20,6 +22,7 @@ func InitHandlers() {
 
 	ConversationStore = store.NewConversationStore()
 	SettingsStore = store.NewSettingsStore(settingsPath)
+	SecretsStore = store.NewSecretsStore()
 
 	userSettings := SettingsStore.Get()
 	if userSettings.LLMAPIKey != "" {

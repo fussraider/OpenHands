@@ -61,9 +61,9 @@ func (r *DockerRuntime) ensureContainer(ctx context.Context) error {
 		os.MkdirAll(workspaceDir, 0755)
 
 		resp, err := r.client.ContainerCreate(ctx, &container.Config{
-			Image: imageName,
-			Cmd:   []string{"tail", "-f", "/dev/null"}, // Keep alive
-			Tty:   true,
+			Image:      imageName,
+			Cmd:        []string{"tail", "-f", "/dev/null"}, // Keep alive
+			Tty:        true,
 			WorkingDir: "/workspace",
 		}, &container.HostConfig{
 			Mounts: []mount.Mount{

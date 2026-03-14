@@ -45,4 +45,6 @@ type GitProvider interface {
 	GetMicroagents(ctx context.Context, token, owner, repo string) ([]microagent.MicroagentResponse, error)
 	GetMicroagentContent(ctx context.Context, token, owner, repo, path string) (*microagent.MicroagentContentResponse, error)
 	GetSuggestedTasks(ctx context.Context, token string) ([]SuggestedTask, error)
+	CreatePR(ctx context.Context, token string, repoName, sourceBranch, targetBranch, title, description string, draft bool, labels []string) (string, error)
+	CreateMR(ctx context.Context, token string, id interface{}, sourceBranch, targetBranch, title, description string, labels []string) (string, error)
 }

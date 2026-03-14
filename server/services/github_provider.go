@@ -248,3 +248,38 @@ func (s *GitHubProvider) GetSuggestedTasks(ctx context.Context, token string) ([
 	}
 	return tasks, nil
 }
+
+func (s *GitHubProvider) CreatePR(ctx context.Context, token string, repoName, sourceBranch, targetBranch, title, body string, draft bool, labels []string) (string, error) {
+	client := s.getClient(ctx, token)
+	parts := strings.Split(repoName, "/")
+	if len(parts) != 2 {
+		return "", fmt.Errorf("invalid repo name format: %s", repoName)
+	}
+	owner, repo := parts[0], parts[1]
+
+	newPR := &github.NewPullRequest{
+		Title:               github.String(title),
+		Head:                github.String(sourceBranch),
+		Base:                github.String(targetBranch),
+		Body:                github.String(body),
+		Draft:               github.Bool(draft),
+	}
+
+	pr, _, err := client.PullRequests.Create(ctx, owner, repo, newPR)
+	if err != nil {
+		return "", err
+	}
+
+	if len(labels) > 0 {
+		_, _, err = client.Issues.AddLabelsToIssue(ctx, owner, repo, pr.GetNumber(), labels)
+		if err != nil {
+			slog.Warn("Failed to add labels to PR", "error", err)
+		}
+	}
+
+	return pr.GetHTMLURL(), nil
+}
+
+func (s *GitHubProvider) CreateMR(ctx context.Context, token string, id interface{}, sourceBranch, targetBranch, title, description string, labels []string) (string, error) {
+	return "", fmt.Errorf("CreateMR not supported on GitHub, use CreatePR")
+}

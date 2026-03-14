@@ -2,50 +2,42 @@ package handlers
 
 import (
 	"crypto/aes"
-	"log/slog"
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
+	"openhands-go/server/models"
 	"os"
 	"strings"
-	"sync"
-)
-
-type Secrets map[string]string
-
-var (
-	secretsStore = make(Secrets)
-	secretsMutex sync.RWMutex
 )
 
 // GetSecretsHandler lists secrets (keys only, masked values?)
 // Python implementation returns all secrets, masked if exposed
 func GetSecretsHandler(w http.ResponseWriter, r *http.Request) {
-	secretsMutex.RLock()
-	defer secretsMutex.RUnlock()
+	allSecrets, err := SecretsStore.GetAll()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	type customSecret struct {
 		Name        string `json:"name"`
 		Description string `json:"description"`
 	}
 
-	customSecrets := make([]customSecret, 0, len(secretsStore))
-	for k := range secretsStore {
+	customSecrets := make([]customSecret, 0, len(allSecrets))
+	for _, sec := range allSecrets {
 		// Filter out internal secrets like git_provider_*
-		if !strings.HasPrefix(k, "git_provider_") {
+		if !strings.HasPrefix(sec.Name, "git_provider_") {
 			customSecrets = append(customSecrets, customSecret{
-				Name:        k,
-				Description: "", // Description not currently stored in simple MVP map
+				Name:        sec.Name,
+				Description: sec.Description,
 			})
 		}
-	}
-
-	if customSecrets == nil {
-		customSecrets = []customSecret{}
 	}
 
 	response := map[string]interface{}{
@@ -80,9 +72,16 @@ func StoreSecretHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	secretsMutex.Lock()
-	defer secretsMutex.Unlock()
-	secretsStore[req.Name] = encryptedValue
+	err = SecretsStore.Save(&models.SecretInfo{
+		Name:        req.Name,
+		Value:       encryptedValue,
+		Description: req.Description,
+	})
+
+	if err != nil {
+		http.Error(w, "Failed to store secret", http.StatusInternalServerError)
+		return
+	}
 
 	w.WriteHeader(http.StatusCreated)
 }
@@ -102,9 +101,6 @@ func StoreGitProvidersHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	secretsMutex.Lock()
-	defer secretsMutex.Unlock()
-
 	// Store these tokens in the secretsStore with a prefix
 	for provider, tokenData := range req.ProviderTokens {
 		key := "git_provider_" + provider
@@ -113,7 +109,10 @@ func StoreGitProvidersHandler(w http.ResponseWriter, r *http.Request) {
 		data, _ := json.Marshal(tokenData)
 		encryptedValue, err := encrypt(string(data))
 		if err == nil {
-			secretsStore[key] = encryptedValue
+			SecretsStore.Save(&models.SecretInfo{
+				Name:  key,
+				Value: encryptedValue,
+			})
 		}
 	}
 
@@ -123,13 +122,16 @@ func StoreGitProvidersHandler(w http.ResponseWriter, r *http.Request) {
 
 // UnsetGitProvidersHandler handles POST /api/unset-provider-tokens
 func UnsetGitProvidersHandler(w http.ResponseWriter, r *http.Request) {
-	secretsMutex.Lock()
-	defer secretsMutex.Unlock()
+	allSecrets, err := SecretsStore.GetAll()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	// Find and delete all git provider tokens
-	for key := range secretsStore {
-		if strings.HasPrefix(key, "git_provider_") {
-			delete(secretsStore, key)
+	for _, sec := range allSecrets {
+		if strings.HasPrefix(sec.Name, "git_provider_") {
+			SecretsStore.Delete(sec.Name)
 		}
 	}
 
@@ -160,26 +162,33 @@ func UpdateSecretHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	secretsMutex.Lock()
-	defer secretsMutex.Unlock()
-
-	// Ensure the secret exists before updating
-	if _, exists := secretsStore[id]; !exists {
+	existingSecret, err := SecretsStore.Get(id)
+	if err != nil {
 		http.Error(w, "secret not found", http.StatusNotFound)
 		return
 	}
 
-	// For MVP, we only keep track of the encrypted value.
 	// If the name changed, we need to move the key.
 	if id != req.Name {
 		// Check if new name already exists
-		if _, exists := secretsStore[req.Name]; exists {
+		if _, err := SecretsStore.Get(req.Name); err == nil {
 			http.Error(w, "a secret with the new name already exists", http.StatusBadRequest)
 			return
 		}
-		// Move the value to the new key
-		secretsStore[req.Name] = secretsStore[id]
-		delete(secretsStore, id)
+
+		// Save under new name
+		err = SecretsStore.Save(&models.SecretInfo{
+			Name:        req.Name,
+			Value:       existingSecret.Value,
+			Description: req.Description,
+		})
+		if err == nil {
+			SecretsStore.Delete(id)
+		}
+	} else {
+		// Update description
+		existingSecret.Description = req.Description
+		SecretsStore.Save(existingSecret)
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -193,15 +202,12 @@ func DeleteSecretHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	secretsMutex.Lock()
-	defer secretsMutex.Unlock()
-
-	if _, exists := secretsStore[id]; !exists {
+	if _, err := SecretsStore.Get(id); err != nil {
 		http.Error(w, "secret not found", http.StatusNotFound)
 		return
 	}
 
-	delete(secretsStore, id)
+	SecretsStore.Delete(id)
 
 	w.WriteHeader(http.StatusOK)
 }
@@ -273,15 +279,15 @@ func decrypt(cryptoText string) (string, error) {
 }
 
 func GetSecret(key string) (string, bool) {
-	secretsMutex.RLock()
-	defer secretsMutex.RUnlock()
-
-	encryptedValue, ok := secretsStore[key]
-	if !ok {
+	if SecretsStore == nil {
+		return "", false
+	}
+	secretInfo, err := SecretsStore.Get(key)
+	if err != nil {
 		return "", false
 	}
 
-	decryptedValue, err := decrypt(encryptedValue)
+	decryptedValue, err := decrypt(secretInfo.Value)
 	if err != nil {
 		// If decryption fails, it might be an old unencrypted secret or a bad key.
 		// For safety, return the encrypted string or empty.

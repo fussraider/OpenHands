@@ -18,7 +18,7 @@ func InitDB(dsn string) error {
 	}
 
 	// Auto Migrate models
-	err = db.AutoMigrate(&models.ConversationInfo{})
+	err = db.AutoMigrate(&models.ConversationInfo{}, &models.SecretInfo{})
 	if err != nil {
 		slog.Error("Failed to auto migrate database", "error", err)
 		return err
