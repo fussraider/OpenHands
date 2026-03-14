@@ -17,6 +17,7 @@ import (
 	"openhands-go/server/runtime/plugins/editor"
 	"openhands-go/server/runtime/plugins/jupyter"
 	"openhands-go/server/security"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -39,6 +40,9 @@ type Agent struct {
 	LoopDetector   *LoopDetector
 	Condenser      memory.Condenser
 	Security       security.SecurityAnalyzer
+
+	State     string
+	stepMutex sync.Mutex
 }
 
 func NewAgent(id, conversationID string, llmService *llm.LLMService, rt runtime.Runtime, es *events.EventStream, delegator Delegator, cfg *config.Config) *Agent {
@@ -67,6 +71,7 @@ func NewAgent(id, conversationID string, llmService *llm.LLMService, rt runtime.
 		Config:         cfg,
 		LoopDetector:   NewLoopDetector(),
 		Security:       security.NewBasicAnalyzer(),
+		State:          "init",
 	}
 
 	// Initialize Security Analyzer
@@ -564,57 +569,25 @@ func (a *Agent) RunLoop(ctx context.Context) {
 		slog.Error("Failed to init plugins", "error", err)
 	}
 
-	// Emit initial "running" status
+	a.State = "running"
 	a.emitStateUpdate("running")
+
+	unsubscribe := a.EventStream.Subscribe(func(event events.Event) {
+		a.onEvent(ctx, event)
+	})
+	defer unsubscribe()
+
+	go a.onEvent(ctx, events.Event{Type: events.EventTypeAction, Source: "system"})
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		default:
-			result, err := a.Step(ctx)
-			if err != nil {
-				slog.Error("Agent step error", "error", err)
-				a.emitStateUpdate("error")
-				time.Sleep(5 * time.Second) // Backoff
-				a.emitStateUpdate("running")
-				continue
-			}
-
-			switch result {
-			case StepResultFinished:
-				slog.Info("Agent finished", "conversation_id", a.ConversationID)
-				a.emitStateUpdate("finished")
+			if a.State == "finished" || a.State == "error" || a.State == "stopped" {
 				return
-
-			case StepResultAwaitUserInput:
-				slog.Info("Agent awaiting user input", "conversation_id", a.ConversationID)
-				a.emitStateUpdate("idle")
-
-				// Wait for a new user message before resuming
-				userMsgCh := make(chan struct{}, 1)
-				unsubscribe := a.EventStream.Subscribe(func(event events.Event) {
-					if event.Source == "user" && event.Type == events.EventTypeAction {
-						select {
-						case userMsgCh <- struct{}{}:
-						default:
-						}
-					}
-				})
-
-				select {
-				case <-ctx.Done():
-					unsubscribe()
-					return
-				case <-userMsgCh:
-					unsubscribe()
-					slog.Info("User message received, resuming agent", "conversation_id", a.ConversationID)
-					a.emitStateUpdate("running")
-				}
-
-			case StepResultContinue:
-				time.Sleep(1 * time.Second) // Pace
 			}
+			time.Sleep(1 * time.Second)
 		}
 	}
 }
@@ -642,17 +615,25 @@ func (a *Agent) RunUntilDone(ctx context.Context) (map[string]string, error) {
 		return nil, err
 	}
 
+	a.State = "running"
+
+	unsubscribe := a.EventStream.Subscribe(func(event events.Event) {
+		a.onEvent(ctx, event)
+	})
+	defer unsubscribe()
+
+	go a.onEvent(ctx, events.Event{Type: events.EventTypeAction, Source: "system"})
+
 	for {
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		default:
-			result, err := a.Step(ctx)
-			if err != nil {
-				return nil, err
+			if a.State == "error" || a.State == "stopped" {
+				return nil, fmt.Errorf("agent stopped with state: %s", a.State)
 			}
 
-			if result == StepResultFinished {
+			if a.State == "finished" {
 				// Check for AgentFinishAction outputs
 				evts := a.EventStream.GetEvents()
 				for i := len(evts) - 1; i >= 0; i-- {
@@ -670,4 +651,73 @@ func (a *Agent) RunUntilDone(ctx context.Context) (map[string]string, error) {
 
 func init() {
 	RegisterAgent("CodeActAgent")
+}
+
+func (a *Agent) shouldStep(event events.Event) bool {
+	// If we have a delegate, we might not step, but for now we rely on simple checks.
+	if a.Delegator != nil && a.State == "delegate" {
+		// Example check if delegating
+		// return false
+	}
+
+	if event.Type == events.EventTypeAction {
+		switch event.Content.(type) {
+		case models.MessageAction:
+			if event.Source == "user" {
+				return true
+			}
+			if a.State != "awaiting_user_input" {
+				return true
+			}
+			return false
+		case models.AgentDelegateAction:
+			return true
+		}
+		return false
+	}
+
+	if event.Type == events.EventTypeObservation {
+		if _, ok := event.Content.(map[string]interface{}); ok {
+			// This is typically state update
+			return false
+		}
+		return true
+	}
+
+	return false
+}
+
+func (a *Agent) onEvent(ctx context.Context, event events.Event) {
+	if a.shouldStep(event) {
+		a.stepMutex.Lock()
+		defer a.stepMutex.Unlock()
+
+		// Before calling Step, check state
+		if a.State == "finished" || a.State == "error" || a.State == "stopped" {
+			return
+		}
+
+		slog.Debug("Stepping agent after event", "type", event.Type, "source", event.Source)
+
+		result, err := a.Step(ctx)
+		if err != nil {
+			slog.Error("Agent step error", "error", err)
+			a.emitStateUpdate("error")
+			a.State = "error"
+			return
+		}
+
+		switch result {
+		case StepResultFinished:
+			slog.Info("Agent finished", "conversation_id", a.ConversationID)
+			a.State = "finished"
+			a.emitStateUpdate("finished")
+		case StepResultAwaitUserInput:
+			slog.Info("Agent awaiting user input", "conversation_id", a.ConversationID)
+			a.State = "awaiting_user_input"
+			a.emitStateUpdate("idle")
+		case StepResultContinue:
+			a.State = "running"
+		}
+	}
 }
